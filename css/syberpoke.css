@@ -1,0 +1,333 @@
+/* ============================================= */
+/*          syberpoke.css - v3.0               */
+/*    固定菜单 + 模态框 + 赛博朋克 + 中文注释   */
+/* ============================================= */
+
+/* --- 根变量定义 (颜色、过渡、辉光等) --- */
+:root {
+    /* 主色调 */
+    --primary: #00f3ff;       /* 亮青色 (主霓虹色) */
+    --primary-light: #69f0ff; /* 稍浅的青色 */
+    --secondary: #ff00a0;     /* 品红色 (强调色) */
+    --tertiary: #f0f30a;      /* 亮黄色 (高亮色) */
+
+    /* 背景与文本 */
+    --dark: #080918;         /* 更深的暗蓝紫色背景 */
+    --dark-accent: #1a1b3f;   /* 暗色调强调 */
+    --light: #e8f8ff;        /* 亮色文本/元素 (稍带蓝色调) */
+    --gray: #3a3b5a;         /* 中性灰色调 */
+
+    /* 玻璃效果 */
+    --glass: rgba(12, 14, 35, 0.78);  /* 玻璃背景色 (更偏暗蓝) */
+    --glass-border: rgba(0, 243, 255, 0.28); /* 玻璃边框色 (稍明显) */
+    --glass-hover-border: rgba(0, 243, 255, 0.7); /* Hover时边框更亮 */
+    --sticky-bg: rgba(10, 11, 30, 0.95); /* 吸顶标题的背景色 (更不透明) */
+
+    /* 阴影与辉光 */
+    --shadow: 0 5px 18px rgba(0, 243, 255, 0.12);  /* 更柔和的基础阴影 */
+    --shadow-hover: 0 8px 30px rgba(0, 243, 255, 0.22); /* Hover阴影 */
+    --neon-glow: /* 主青色辉光 (多层叠加) */
+        0 0 6px rgba(0, 243, 255, 0.6),
+        0 0 12px rgba(0, 243, 255, 0.4),
+        0 0 20px rgba(0, 243, 255, 0.2);
+    --neon-glow-pink: /* 品红色辉光 */
+        0 0 6px rgba(255, 0, 160, 0.6),
+        0 0 12px rgba(255, 0, 160, 0.4),
+        0 0 20px rgba(255, 0, 160, 0.2);
+    --neon-glow-yellow: /* 黄色辉光 */
+        0 0 6px rgba(240, 243, 10, 0.7),
+        0 0 12px rgba(240, 243, 10, 0.5),
+        0 0 20px rgba(240, 243, 10, 0.3);
+
+    /* 过渡与动画 */
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); /* 更快的过渡曲线 */
+    --scanline: rgba(0, 243, 255, 0.07); /* 扫描线 */
+    --grid-line: rgba(255, 0, 160, 0.05); /* 网格线 */
+}
+
+/* --- 全局重置与字体 --- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+@font-face { font-family: 'Cyberpunk'; src: local('Rajdhani'), local('Orbitron'), local('Segoe UI'), sans-serif; /* 添加 sans-serif 作为最终后备 */ }
+
+/* --- Body 与背景效果 --- */
+body {
+    font-family: 'Cyberpunk', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(140deg, var(--dark) 10%, var(--dark-accent) 90%); /* 调整渐变角度和比例 */
+    /* 叠加更精细的背景纹理 */
+    background-image:
+        linear-gradient(140deg, var(--dark) 10%, var(--dark-accent) 90%),
+        /* 细微噪点 */
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%239C92AC' fill-opacity='0.06' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E"),
+        repeating-linear-gradient(135deg, var(--grid-line) 0px, var(--grid-line) 1px, transparent 1px, transparent 30px), /* 调整网格间距 */
+        repeating-linear-gradient(45deg, var(--grid-line) 0px, var(--grid-line) 1px, transparent 1px, transparent 30px);
+    color: var(--light);
+    line-height: 1.6; /* 减少行高 */
+    min-height: 100vh;
+    /* 为固定菜单留出顶部空间 */
+    padding-top: 6rem; /* 可根据实际菜单高度调整 */
+    padding-left: clamp(1.5rem, 4vw, 2.5rem); /* 左右内边距 */
+    padding-right: clamp(1.5rem, 4vw, 2.5rem);
+    padding-bottom: clamp(1.5rem, 4vw, 2.5rem); /* 底部内边距 */
+    position: relative;
+    overflow-x: hidden; /* 防止水平滚动 */
+}
+/* 径向光晕效果 */
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(circle at 15% 25%, rgba(255,0,160,.15) 0%, transparent 50%), radial-gradient(circle at 85% 75%, rgba(0,243,255,.15) 0%, transparent 50%), radial-gradient(circle at 55% 55%, rgba(240,243,10,.1) 0%, transparent 40%); pointer-events: none; z-index: -1; mix-blend-mode: color-dodge; /* 尝试不同的混合模式 */ }
+/* 扫描线效果 */
+body::after { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg, var(--scanline) 0px, var(--scanline) 1px, transparent 1px, transparent 3px); /* 更密的扫描线 */ pointer-events: none; z-index: 1000; /* 确保在最上层 */ opacity: 0.15; animation: scanline 12s linear infinite alternate; /* 来回移动 */ }
+
+/* --- 容器与头部 --- */
+.container { max-width: 1180px; /* 稍窄容器 */ margin: 0 auto; position: relative; }
+.header { text-align: center; margin-bottom: 3rem; /* 页头和主内容的间距 */ }
+.header::before { content: ''; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 140px; height: 3px; background: linear-gradient(90deg, transparent, var(--secondary) 50%, transparent); filter: blur(1.5px); opacity: 0.8; }
+.header h1 { font-size: clamp(2rem, 5vw, 3rem); /* 缩小标题 */ font-weight: 700; margin-bottom: 0.6rem; background: linear-gradient(90deg, var(--primary), var(--secondary), var(--tertiary), var(--primary)); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; letter-spacing: 1.8px; text-transform: uppercase; position: relative; text-shadow: var(--neon-glow), 0 0 45px rgba(0, 243, 255, 0.2); animation: neonFlicker 5s infinite alternate, dataStream 10s linear infinite; }
+.header h1::after { content: attr(data-text); position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: blur(12px); opacity: 0.7; }
+.header p { font-size: 1.1rem; color: var(--light); opacity: 0.9; letter-spacing: 0.8px; }
+.movie-count { font-weight: 700; color: var(--secondary); text-shadow: var(--neon-glow-pink); }
+.header hr { border: none; height: 1px; background: linear-gradient(to right, transparent, var(--primary-light), transparent); opacity: 0.3; margin-top: 2rem; }
+
+/* --- 主要内容区域 --- */
+main { display: flex; flex-direction: column; gap: 2.5rem; }
+
+/* --- 卡片通用样式 --- */
+.card { background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 6px; border: 1px solid var(--glass-border); box-shadow: var(--shadow), inset 0 0 15px rgba(0, 243, 255, 0.05); padding: 2rem 2.2rem; transition: var(--transition); opacity: 0; transform: translateY(15px); position: relative; animation: fadeIn 0.6s forwards; }
+/* .management-panels .card { margin-bottom: 0; } /* 这个现在不需要了 */
+.card:not(details):hover, details[open].card { transform: translateY(-4px) scale(1.01); box-shadow: var(--shadow-hover), inset 0 0 20px rgba(0, 243, 255, 0.08); border-color: var(--glass-hover-border); }
+.card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, var(--primary), transparent 70%); filter: blur(1px); opacity: 0.8; transition: width 0.4s ease; }
+.card:hover::before { width: 90%; }
+.card::after { content: ''; position: absolute; bottom: 0; right: 0; width: 50%; height: 1px; background: linear-gradient(90deg, transparent, var(--secondary) 80%); filter: blur(0.5px); opacity: 0.7; transition: width 0.4s ease; }
+.card:hover::after { width: 70%; }
+.card h2 { font-size: clamp(1.3rem, 3vw, 1.6rem); margin-bottom: 1.8rem; color: var(--light); display: flex; align-items: center; text-transform: uppercase; letter-spacing: 1px; position: relative; text-shadow: 0 0 4px rgba(255,255,255,0.15); }
+.card h2 svg { margin-right: 0.7rem; width: 20px; height: 20px; fill: var(--primary); filter: drop-shadow(0 0 5px var(--primary)); }
+/* 移除标题下划线，因为标题现在可能吸顶 */
+/* .card h2::after { ... } */
+
+/* --- 吸顶标题样式 (针对电影收藏列表标题) --- */
+#my-collection-section > h2.sticky-header { /* 添加 .sticky-header 类以应用样式 */
+    position: -webkit-sticky; position: sticky;
+    top: 0rem; /* 吸附距离页面顶部 */
+    background: var(--sticky-bg); /* 吸顶背景色 */
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    padding: 1rem 2.2rem; /* 吸顶时的内边距 */
+    margin: -2rem -2.2rem 1.5rem -2.2rem; /* 负边距使其延伸到卡片边缘 */
+    border-bottom: 1px solid var(--glass-border);
+    z-index: 999; /* 确保在普通内容之上，但在模态框和下拉菜单之下 */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+/* 吸顶标题的下划线 */
+#my-collection-section > h2.sticky-header::after {
+    content: ''; position: absolute; bottom: 0.5rem; left: 2.2rem;
+    width: 45px; height: 2px; background: var(--secondary);
+    box-shadow: var(--neon-glow-pink); border-radius: 1px;
+}
+/* 确保列表操作栏在吸顶标题下方有足够空间 */
+#my-collection-section > .movie-actions-bar {
+    margin-top: 0; /* 可能不再需要额外的 margin，因为标题已定位 */
+    padding-top: 0.5rem; /* 保留一点内边距 */
+}
+
+/* --- 可折叠面板 (如果其他地方还用) --- */
+/* 保留 .card summary, .card details 相关样式 */
+
+/* --- 表单样式 (主要用于模态框) --- */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem 1.5rem; margin-bottom: 1.5rem; }
+.form-group { margin-bottom: 1.2rem; }
+.form-group label { font-size: 0.8rem; margin-bottom: 0.4rem; opacity: 0.85; display: block; text-transform: uppercase; letter-spacing: 0.4px; }
+.form-group label span { color: var(--secondary); margin-left: 3px; }
+.form-control { width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--glass-border); border-radius: 4px; background: rgba(10, 11, 30, 0.7); font-size: 0.95rem; transition: var(--transition), box-shadow 0.3s ease; color: var(--light); position: relative; z-index: 1; }
+.form-control::placeholder { color: rgba(230, 242, 255, 0.35); }
+.form-control:focus { outline: none; border-color: var(--primary-light); background: rgba(10, 11, 30, 0.8); box-shadow: 0 0 0 2px rgba(0, 243, 255, 0.2), 0 0 12px rgba(0, 243, 255, 0.5), inset 0 0 5px rgba(0, 243, 255, 0.1); }
+textarea.form-control { min-height: 75px; resize: vertical; }
+/* 添加电影模态框内的特殊布局 */
+#addMovieModal .form-group > div:has(input#modalTitle) { display: flex; gap: 0.6rem; align-items: center; }
+#addMovieModal input#modalTitle { flex-grow: 1; }
+#addMovieModal button[onclick="searchDoubanFromModal()"] { flex-shrink: 0; height: calc(1.9em + 1.6rem + 2px); }
+
+/* --- 按钮样式 --- */
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.7rem 1.4rem; border-radius: 4px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: var(--transition), transform 0.15s ease; border: none; text-decoration: none; letter-spacing: 1px; text-transform: uppercase; position: relative; overflow: hidden; line-height: 1.4; }
+.btn svg { width: 15px; height: 15px; margin-right: 0.6em; vertical-align: middle; fill: currentColor; transition: transform 0.2s ease; }
+.btn:hover svg { transform: scale(1.1); }
+.btn:disabled { cursor: not-allowed; opacity: 0.5; filter: grayscale(50%); }
+.btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 0%, transparent 50%, rgba(255, 255, 255, 0.15) 100%); background-size: 200% 200%; background-position: 200% 0; transition: background-position 0.5s ease-out; opacity: 0; z-index: 0; }
+.btn:not(:disabled):hover::before { background-position: -100% 0; opacity: 1; }
+.btn > * { position: relative; z-index: 1; }
+.btn:not(:disabled):active { transform: scale(0.97); }
+.btn-primary { background: linear-gradient(110deg, var(--primary), var(--secondary)); color: var(--dark); font-weight: 700; box-shadow: 0 3px 10px rgba(0, 243, 255, 0.3), 0 0 15px rgba(255, 0, 160, 0.15); text-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+.btn-primary:not(:disabled):hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 6px 15px rgba(0, 243, 255, 0.4), 0 0 25px rgba(255, 0, 160, 0.25); }
+.btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); box-shadow: 0 0 6px rgba(0, 243, 255, 0.3), inset 0 0 8px rgba(0, 243, 255, 0.05); }
+.btn-outline:not(:disabled):hover { background: rgba(0, 243, 255, 0.12); color: var(--light); border-color: var(--primary-light); box-shadow: 0 0 12px rgba(0, 243, 255, 0.5), inset 0 0 10px rgba(0, 243, 255, 0.1); text-shadow: 0 0 5px var(--primary); }
+.btn-small { padding: 0.5rem 1rem; font-size: 0.8rem; letter-spacing: 0.5px; }
+.btn-small svg { width: 13px; height: 13px; margin-right: 0.5em; }
+
+/* --- CSV 上传 (模态框内) --- */
+.csv-upload { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
+.file-input { display: none; }
+.file-label { display: inline-flex; align-items: center; cursor: pointer; }
+.file-name { margin-left: 0.4rem; font-size: 0.85rem; opacity: 0.75; font-style: italic; flex-grow: 1; word-break: break-all; color: var(--primary-light); }
+/* 导入模态框内的文件名显示调整 */
+#importCsvModal .file-name { display: block; margin-top: 0.5rem; width: 100%; text-align: center; }
+
+/* --- 固定右上角管理菜单 --- */
+.header-actions-fixed { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 1020; /* 确保在内容和吸顶标题之上 */ }
+
+/* --- 下拉菜单样式 --- */
+.dropdown-menu { display: none; position: absolute; top: calc(100% + 8px); right: 0; min-width: 200px; background: var(--dark); border: 1px solid var(--primary); border-radius: 4px; box-shadow: var(--shadow-hover), 0 0 40px rgba(0, 243, 255, 0.25); padding: 0.6rem 0; z-index: 1010; opacity: 0; transform: translateY(-10px) scale(0.95); transition: opacity 0.2s ease-out, transform 0.2s ease-out; list-style: none; }
+.dropdown-menu.active { display: block; opacity: 1; transform: translateY(0) scale(1); }
+.dropdown-menu a { display: flex; align-items: center; gap: 0.7em; padding: 0.8rem 1.3rem; color: var(--primary-light); text-decoration: none; font-size: 0.9rem; white-space: nowrap; transition: background-color 0.2s ease, color 0.2s ease; }
+.dropdown-menu a svg { width: 16px; height: 16px; fill: currentColor; opacity: 0.8; transition: opacity 0.2s; }
+.dropdown-menu a:hover { background-color: rgba(0, 243, 255, 0.15); color: var(--light); }
+.dropdown-menu a:hover svg { opacity: 1; }
+/* 禁用的菜单项样式 */
+.dropdown-item-disabled { color: var(--gray) !important; opacity: 0.5; cursor: not-allowed; pointer-events: none; background-color: transparent !important; }
+.dropdown-item-disabled svg { opacity: 0.4; }
+/* 下拉菜单分隔线 */
+.dropdown-divider { height: 1px; margin: 0.5rem 0; overflow: hidden; background-color: var(--glass-border); opacity: 0.5; }
+
+
+/* --- 电影列表与卡片样式 (垂直布局, 海报缩小居中) --- */
+/* --- Movie List & Item Styles (Fixed Columns) --- */
+.movie-list {
+    display: grid;
+    gap: 2rem; /* 卡片间距 */
+
+    /* 默认（移动端优先）：单列 */
+    grid-template-columns: 1fr;
+}
+
+/* 中等屏幕（例如 >= 640px）：尝试 2 列 */
+@media (min-width: 640px) {
+    .movie-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2rem; /* 调整列间距 */
+    }
+}
+
+/* 较大屏幕（例如 >= 992px）：设置为 3 列 */
+@media (min-width: 992px) {
+    .movie-list {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2.5rem; /* 可以稍微增大间距 */
+    }
+}
+
+/* 超大屏幕（例如 >= 1400px）：也可以考虑 4 列，但 3 列通常更舒适 */
+/* 如果要用 4 列，需要考虑将 moviesPerPage 改为 8 或 12 */
+@media (min-width: 1400px) {
+    .movie-list {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2.5rem;
+    }
+}
+
+
+.movie-item { display: flex; flex-direction: column; background: var(--glass); backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); border-radius: 5px; border: 1px solid var(--glass-border); box-shadow: var(--shadow); transition: var(--transition), border-color 0.3s, box-shadow 0.3s; opacity: 0; transform: translateY(15px); position: relative; animation: fadeIn 0.5s forwards; }
+.movie-item:hover { transform: translateY(-4px); border-color: var(--primary-light); box-shadow: var(--shadow-hover), 0 0 20px rgba(0, 243, 255, 0.15); }
+.movie-item-poster { width: 60%; margin: 1rem auto 0 auto; aspect-ratio: 2 / 3; overflow: hidden; border-radius: 4px; box-shadow: 0 3px 8px rgba(0,0,0,0.3); }
+.movie-item-poster img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s ease, filter 0.35s ease; filter: saturate(1.1) brightness(0.95); }
+.movie-item:hover .movie-item-poster img { transform: scale(1.04); filter: saturate(1.35) brightness(1.05); }
+.movie-item-content { padding: 1rem 1.8rem 1.2rem 1.8rem; display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
+.movie-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.7rem; line-height: 1.35; color: var(--primary-light); transition: color 0.3s ease, text-shadow 0.3s; word-break: break-word; overflow-wrap: break-word; text-shadow: 0 0 3px rgba(0, 243, 255, 0.15); text-align: center; margin-top: 0.5rem; }
+.movie-item:hover .movie-title { color: var(--light); text-shadow: var(--neon-glow); }
+.movie-details-grid { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.9rem; align-items: start; }
+.movie-rating-display { display: inline-flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 700; color: var(--tertiary); margin-bottom: 0.5rem; text-shadow: var(--neon-glow-yellow); gap: 0.3em; }
+.movie-rating-display svg { width: 1em; height: 1em; fill: currentColor; filter: drop-shadow(0 0 2px var(--tertiary)); }
+.movie-rating-display.placeholder { font-size: 0.8rem; justify-content: center; }
+.meta-item { display: flex; align-items: flex-start; font-size: 0.8rem; color: var(--light); opacity: 0.8; margin-bottom: 0.3rem; }
+.meta-item svg { width: 12px; height: 12px; fill: var(--primary); filter: drop-shadow(0 0 2px var(--primary)); margin-right: 0.5em; flex-shrink: 0; margin-top: 0.2em; }
+.meta-item span { word-break: break-word; overflow-wrap: break-word; line-height: 1.4; }
+.movie-review { font-size: 0.85rem; line-height: 1.5; color: var(--light); opacity: 0.9; margin-top: 0.8rem; margin-bottom: 1rem; word-break: break-word; overflow-wrap: break-word; flex-grow: 1; min-height: 0; border-left: 2px solid rgba(0, 243, 255, 0.2); padding-left: 0.8rem; font-style: italic; }
+.movie-actions { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; padding-top: 0.7rem; border-top: 1px solid rgba(0, 243, 255, 0.18); gap: 0.8rem; }
+.movie-date { font-size: 0.75rem; opacity: 0.6; white-space: nowrap; text-align: right; color: var(--primary-light); }
+.action-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.movie-actions .btn-small { border-color: rgba(0, 243, 255, 0.4); color: rgba(0, 243, 255, 0.8); box-shadow: 0 0 4px rgba(0, 243, 255, 0.15); }
+.movie-actions .btn-small:hover { background: rgba(0, 243, 255, 0.15); color: var(--light); border-color: var(--primary-light); box-shadow: var(--neon-glow); }
+.checkbox-container { position: absolute; top: 8px; right: 8px; left: auto; z-index: 10; background: rgba(10, 11, 30, 0.85); border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--glass-border); transition: border-color 0.2s, box-shadow 0.2s; }
+.movie-item:hover .checkbox-container { border-color: var(--primary); box-shadow: 0 0 8px rgba(0, 243, 255, 0.5); }
+.checkbox-input { cursor: pointer; width: 14px; height: 14px; accent-color: var(--secondary); }
+
+/* --- 电影列表操作栏 (只剩全选) --- */
+.movie-actions-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 0.8rem; border-bottom: 1px dashed var(--glass-border); }
+.movie-actions-bar > div:last-child { min-width: 10px; /* 占位符，确保 space-between 生效 */ }
+.select-all-container { display: flex; align-items: center; gap: 0.6rem; color: var(--light); }
+.select-all-container label { cursor: pointer; font-weight: 500; }
+
+/* --- 分页 --- */
+.pagination { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 0.8rem 1rem; margin: 3rem 0 1.5rem 0; padding: 0; background: none; border: none; box-shadow: none; position: static; }
+.pagination-btn { background: transparent; border: 1px solid var(--primary); color: var(--primary); box-shadow: 0 0 4px rgba(0, 243, 255, 0.2); padding: 0.5rem 1rem; font-size: 0.85rem; }
+.pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; border-color: var(--gray); color: var(--gray); box-shadow: none; }
+.pagination-btn:not(:disabled):hover { background: rgba(0, 243, 255, 0.15); box-shadow: 0 0 8px rgba(0, 243, 255, 0.5); text-shadow: 0 0 4px var(--primary); }
+.pagination-info { font-size: 0.95rem; opacity: 0.9; white-space: nowrap; margin: 0 0.5rem; }
+.pagination-jump { display: flex; align-items: center; gap: 0.5rem; }
+.pagination-jump input { width: 55px; padding: 0.5rem; font-size: 0.9rem; text-align: center; }
+.pagination-jump button { background: linear-gradient(110deg, var(--primary), var(--secondary)); color: var(--dark); font-weight: 600; box-shadow: 0 2px 8px rgba(0, 243, 255, 0.3); padding: 0.5rem 1rem; font-size: 0.85rem; }
+.pagination-jump button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 243, 255, 0.4); }
+
+/* --- 模态框 --- */
+.modal-overlay { position: fixed; inset:0; background: rgba(8, 9, 24, 0.9); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1050; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s 0.3s linear; }
+.modal-overlay.active { opacity: 1; visibility: visible; transition: opacity 0.3s ease, visibility 0s 0s linear; }
+.modal-container { background: #10122a; border-radius: 6px; border: 1px solid var(--primary); box-shadow: 0 0 30px rgba(0, 243, 255, 0.3), 0 0 60px rgba(0, 243, 255, 0.15); width: 90%; max-width: 780px; max-height: 88vh; overflow-y: auto; position: relative; transform: scale(0.9) translateY(15px); transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.modal-overlay.active .modal-container { transform: scale(1) translateY(0); }
+.modal-container::before { display: none; }
+.modal-header { padding: 1.5rem 2rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
+.modal-title { font-size: 1.4rem; color: var(--primary-light); margin: 0; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 0 5px var(--primary); }
+.modal-close { background: none; border: none; color: var(--primary-light); font-size: 2rem; line-height: 1; cursor: pointer; padding: 0.1rem; border-radius: 50%; transition: var(--transition); }
+.modal-close:hover { background: rgba(255, 0, 160, 0.2); color: var(--secondary); transform: rotate(90deg); }
+.modal-body { padding: 2rem; }
+.modal-footer { padding: 1.5rem 2rem; border-top: 1px solid var(--glass-border); display: flex; justify-content: flex-end; gap: 1rem; }
+
+/* --- 页脚 --- */
+.footer { text-align: center; margin-top: 5rem; font-size: 0.85rem; opacity: 0.5; letter-spacing: 0.3px; color: var(--primary-light); }
+
+/* --- 动画 --- */
+@keyframes fadeIn { 0% { opacity: 0; transform: translateY(15px); } 100% { opacity: 1; transform: translateY(0); } }
+@keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
+@keyframes neonFlicker { 0%,19%,21%,23%,25%,54%,56%,100%{opacity:1;text-shadow:var(--neon-glow)} 20%,24%,55%{opacity:0.7;text-shadow:none} }
+@keyframes dataStream { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+/* Spinner 定义在 HTML <style> 中 */
+
+/* --- 响应式调整 --- */
+@media (max-width: 768px) {
+    body { padding-top: 5rem; padding-left: 1rem; padding-right: 1rem; padding-bottom: 1.5rem;}
+    .header-actions-fixed { top: 1rem; right: 1rem; }
+    .card { padding: 1.5rem; }
+    main { gap: 1.5rem; }
+    .header h1 { font-size: clamp(2rem, 7vw, 2.5rem); }
+    .movie-list { gap: 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); }
+    .movie-item-poster { width: 85%; }
+    .movie-item-content { padding: 1rem 1.2rem; }
+    .movie-title { font-size: 1.1rem; margin-bottom: 0.7rem; }
+    .movie-details-grid { gap: 0.5rem 0.8rem; margin-bottom: 0.8rem; }
+    .movie-rating-display { font-size: 1.3rem; margin-bottom: 0.5rem; }
+    .meta-item { font-size: 0.8rem; }
+    .meta-item svg { width: 12px; height: 12px; }
+    .movie-review { font-size: 0.85rem; margin-bottom: 1rem; }
+    .movie-actions { padding-top: 0.7rem; flex-wrap: wrap; }
+    .action-buttons { flex-basis: 100%; justify-content: flex-start; margin-bottom: 0.4rem;}
+    .movie-date { flex-basis: 100%; text-align: left; }
+    .form-grid { grid-template-columns: 1fr; }
+    .csv-upload { flex-direction: column; align-items: stretch; }
+    .csv-upload .btn-primary { margin-top: 0.5rem; }
+    .pagination { gap: 0.5rem 0.8rem; margin-top: 2.5rem; }
+}
+@media (max-width: 480px) {
+    body { padding: 1rem 0.8rem; padding-top: 4.5rem; } /* 调整顶部 padding */
+    .header-actions-fixed { top: 0.8rem; right: 0.8rem; } /* 调整固定按钮位置 */
+    .header-actions-fixed button span { display: none; } /* 隐藏按钮文字 */
+    .header-actions-fixed button svg { margin-right: 0; }
+    .dropdown-menu { min-width: 160px; }
+    .card { padding: 1.2rem 1rem; }
+    .header { margin-bottom: 2.5rem; }
+    .movie-list { grid-template-columns: 1fr; gap: 1.2rem; }
+    .movie-item-poster { width: 90%; aspect-ratio: 2 / 3; }
+    .movie-title { font-size: 1.05rem; }
+    .movie-details-grid { grid-template-columns: 1fr; }
+    .meta-item { margin-bottom: 0.4rem; }
+    .pagination-info { display: none; }
+    .pagination-jump input { width: 45px; }
+}
+
+/* 空列表消息样式 */
+.empty-message { grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; color: var(--light); opacity: 0.5; font-style: italic; font-size: 1.1rem; border: 1px dashed var(--glass-border); border-radius: 4px; }
+
+/* Spinner 动画 */
+.spinner { display: inline-block; vertical-align: middle; animation: spin 1s linear infinite; }
