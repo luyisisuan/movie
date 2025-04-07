@@ -187,12 +187,8 @@ function parseCSV(csvText) {
     const headers = rows[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
     console.log("解析到的 CSV 表头:", headers);
 
-    // 检查必需的表头是否存在
-    const requiredHeaders = ['电影/电视剧/番组', '观影日期'];
-    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-    if (missingHeaders.length > 0) {
-        throw new Error(`CSV 文件缺少必要的列：'${missingHeaders.join("', '")}'`);
-    }
+    // 不再检查必需的表头
+    console.log("CSV导入：所有字段均为可选");
 
     // 创建表头到索引的映射
     const headerIndex = Object.fromEntries(headers.map((h, i) => [h, i]));
@@ -229,9 +225,9 @@ function parseCSV(csvText) {
             coverUrl: getColumnValue(cleanedColumns, '海报URL')
         };
 
-        // 行数据校验
-        if (!movie.title || !movie.ratingDate || isNaN(new Date(movie.ratingDate).getTime())) {
-            console.warn(`跳过 CSV 行 ${rowIndex + 2}: 缺少标题/观影日期或日期格式无效。`);
+        // 行数据校验 - 不再要求必填字段
+        if (movie.ratingDate && isNaN(new Date(movie.ratingDate).getTime())) {
+            console.warn(`跳过 CSV 行 ${rowIndex + 2}: 观影日期格式无效。`);
             return null;
         }
         return { id: Date.now() + Math.random(), ...movie, createdAt: new Date().toISOString() };
@@ -425,93 +421,41 @@ async function addMovie(e) {
 /**
  * 渲染电影列表及分页。
  */
-/**
- * 渲染电影列表及分页。
- */
 function renderMovies() {
     let movies = JSON.parse(localStorage.getItem('movies') || '[]');
     const container = document.getElementById('movieList'); container.innerHTML = '';
     document.getElementById('movieCount').textContent = movies.length;
 
-    // 1. 按打分日期降序排序
-    movies.sort((a, b) => {
-        const dateA = a.ratingDate ? new Date(a.ratingDate) : 0; // 无效日期视为最早
-        const dateB = b.ratingDate ? new Date(b.ratingDate) : 0;
-        const isValidA = !isNaN(dateA); const isValidB = !isNaN(dateB);
-        if (isValidB && !isValidA) return -1; // 有效日期在前
-        if (!isValidB && isValidA) return 1;
-        if (!isValidB && !isValidA) return 0; // 都无效则保持原始顺序
-        return dateB - dateA; // 日期降序
-    });
+    // 1. 排序
+    movies.sort((a, b) => { const dA=a.ratingDate?new Date(a.ratingDate):0;const dB=b.ratingDate?new Date(b.ratingDate):0;if(isNaN(dA)&&!isNaN(dB))return 1;if(!isNaN(dA)&&isNaN(dB))return-1;if(isNaN(dA)&&isNaN(dB))return 0;return dB-dA;});
 
-    // 2. 处理分页
-    const totalMovies = movies.length;
-    const totalPages = Math.ceil(totalMovies / moviesPerPage);
-    if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
-    else if (currentPage < 1) currentPage = 1;
-    document.getElementById('currentPage').textContent = currentPage;
-    document.getElementById('totalPages').textContent = totalPages > 0 ? totalPages : 1;
-    document.getElementById('prevPage').disabled = currentPage === 1;
-    document.getElementById('nextPage').disabled = currentPage === totalPages || totalMovies === 0;
+    // 2. 分页逻辑
+    const totalMovies = movies.length; const totalPages = Math.ceil(totalMovies / moviesPerPage);
+    if (currentPage > totalPages && totalPages > 0) currentPage = totalPages; else if (currentPage < 1) currentPage = 1;
+    document.getElementById('currentPage').textContent = currentPage; document.getElementById('totalPages').textContent = totalPages > 0 ? totalPages : 1;
+    document.getElementById('prevPage').disabled = currentPage === 1; document.getElementById('nextPage').disabled = currentPage === totalPages || totalMovies === 0;
     document.getElementById('jumpPage').max = totalPages > 0 ? totalPages : 1;
     document.getElementById('pagination').style.display = totalMovies > 0 ? 'flex' : 'none';
 
-    // 3. 处理空列表
-    if (totalMovies === 0) {
-        container.innerHTML = '<p class="empty-message">这里空空如也，快添加你的第一部电影吧！</p>';
-        document.getElementById('selectAll').checked = false;
-        checkSelectedMovies(); // 仍然需要更新菜单项状态
-        return;
-    }
+    // 3. 空列表处理
+    if (totalMovies === 0) { container.innerHTML = '<p class="empty-message">这里空空如也，快添加你的第一部电影吧！</p>'; document.getElementById('selectAll').checked=false; checkSelectedMovies(); return; }
 
-    // 4. 获取当前页数据并渲染
-    const startIndex = (currentPage - 1) * moviesPerPage;
-    const endIndex = Math.min(startIndex + moviesPerPage, totalMovies);
+    // 4. 渲染卡片
+    const startIndex = (currentPage - 1) * moviesPerPage; const endIndex = Math.min(startIndex + moviesPerPage, totalMovies);
     const currentPageMovies = movies.slice(startIndex, endIndex);
-
-    currentPageMovies.forEach((m, index) => { // 使用 m 作为 movie 对象
-        const el = document.createElement('div');
-        el.className = 'movie-item';
-        el.style.animationDelay = `${0.05 + index * 0.03}s`;
-
+    currentPageMovies.forEach((m, index) => {
+        const el = document.createElement('div'); el.className = 'movie-item'; el.style.animationDelay = `${0.05 + index * 0.03}s`;
         const rating = typeof m.rating === 'number' ? m.rating.toFixed(1) : null;
         const added = m.createdAt ? new Date(m.createdAt).toLocaleDateString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit'}) : '?';
         const cover = m.coverUrl || DEFAULT_POSTER_URL;
-
-        // 辅助函数创建 Meta HTML
         const createMetaItem = (iconPath, title, value) => value ? `<div class="meta-item" title="${title}: ${value}"><svg viewBox="0 0 24 24"><path d="${iconPath}"/></svg><span>${value}</span></div>` : '';
-
-        // 构建 Meta HTML 字符串
-        const metaHTML = `
-            ${rating ? `<div class="movie-rating-display" title="个人评分 ${rating}"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg><span>${rating}</span></div>` : '<div class="movie-rating-display placeholder">未评分</div>'}
-            ${createMetaItem("M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z", "上映年份", m.year)}
-            ${createMetaItem("M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z", "导演", m.director)}
-            ${createMetaItem("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z", "国家/地区", m.country)}
-            ${createMetaItem("M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z", "打分日期", m.ratingDate)}
-        `;
-
-        // 构建按钮 HTML
+        const metaHTML = `${rating ? `<div class="movie-rating-display" title="个人评分 ${rating}"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg><span>${rating}</span></div>` : '<div class="movie-rating-display placeholder">未评分</div>'} ${createMetaItem("M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z", "上映年份", m.year)} ${createMetaItem("M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z", "导演", m.director)} ${createMetaItem("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z", "国家/地区", m.country)} ${createMetaItem("M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z", "观影日期", m.ratingDate)}`;
         const linkBtn = m.link ? `<a href="${m.link}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-small" title="查看链接"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg> 链接</a>` : '';
         const editBtn = `<button class="btn btn-outline btn-small" onclick="editMovie('${m.id}')" title="编辑"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg> 编辑</button>`;
         const deleteBtn = `<button class="btn btn-outline btn-small" onclick="deleteMovie('${m.id}')" title="删除"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> 删除</button>`;
-
-        // 填充卡片内容 - 仔细检查这里的结构和闭合
-        el.innerHTML = `
-            <div class="checkbox-container"><input type="checkbox" class="movie-checkbox" data-id="${m.id}" title="选择"></div>
-            <div class="movie-item-poster"><img src="${cover}" alt="${m.title} 海报" loading="lazy" onerror="this.onerror=null; this.src='${DEFAULT_POSTER_URL}';"></div>
-            <div class="movie-item-content">
-                <h3 class="movie-title" title="${m.title}">${m.title}</h3>
-                <div class="movie-details-grid">${metaHTML}</div>
-                ${m.review ? `<p class="movie-review" title="短评">${m.review}</p>` : ''}
-                <div class="movie-actions">
-                    <small class="movie-date" title="添加日期">添加:${added}</small>
-                    <div class="action-buttons"> ${linkBtn} ${editBtn} ${deleteBtn} </div>
-                </div>
-            </div>`; // <-- 确认这个反引号是配对且正确的
-
+        el.innerHTML = `<div class="checkbox-container"><input type="checkbox" class="movie-checkbox" data-id="${m.id}" title="选择"></div><div class="movie-item-poster"><img src="${cover}" alt="${m.title} 海报" loading="lazy" onerror="this.onerror=null; this.src='${DEFAULT_POSTER_URL}';"></div><div class="movie-item-content"><h3 class="movie-title" title="${m.title}">${m.title}</h3><div class="movie-details-grid">${metaHTML}</div>${m.review ? `<p class="movie-review" title="短评">${m.review}</p>` : ''}<div class="movie-actions"><small class="movie-date" title="添加日期">添加:${added}</small><div class="action-buttons"> ${linkBtn} ${editBtn} ${deleteBtn} </div></div></div>`;
         container.appendChild(el);
     });
-
     checkSelectedMovies(); // 更新全选和删除菜单项状态
 }
 
@@ -781,4 +725,4 @@ function init() {
 }
 
 // 页面加载完成后执行初始化
-document.addEventListener('DOMContentLoaded', init);
+document。addEventListener('DOMContentLoaded', init);
