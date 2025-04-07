@@ -6,7 +6,8 @@
 
 一个基于 HTML, CSS 和 JavaScript 构建的纯前端电影收藏管理应用，拥有浓厚的赛博朋克视觉风格。所有数据存储在你的浏览器本地存储 (localStorage) 中，无需后端服务。
 
-![应用截图预览](![image](https://github.com/user-attachments/assets/ab4a3744-74d7-4cae-9734-85519ae115bd)
+![应用截图预览](![image](https://github.com/user-attachments/assets/ab4a3744-74d7-4cae-9734-85519ae115bd)![image](https://github.com/user-attachments/assets/01419097-90b8-4f6b-8c14-79f2f193d903)
+
 )
 
 ---
