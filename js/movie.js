@@ -729,4 +729,4 @@ function init() {
 }
 
 // 页面加载完成后执行初始化
-document。addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', init);
