@@ -1,231 +1,382 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN"> <!-- Keep Chinese language -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>电影收藏馆 | 路易斯酸的艺术寄托</title>
-    <!-- 确保 syberpoke.css 路径正确 -->
+    <title>电影收藏馆 | 意识存储矩阵</title> <!-- Updated Title -->
+    <!-- Ensure syberpoke.css path is correct -->
     <link rel="stylesheet" href="css/syberpoke.css">
-    <link rel="icon" href="image/movie.ico" sizes="any">
-    <!-- 内联样式，用于加载动画等 -->
+    <link rel="icon" href="图片/movie5.ico" sizes="any"> <!-- Ensure icon path is correct -->
+    <!-- Inline Styles (Reduced) -->
     <style>
-        /* 加载动画 */
+        /* Loading Spinner Animation */
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        。spinner { animation: spin 1s linear infinite; fill: currentColor; width: 1em; height: 1em; vertical-align: text-bottom; margin-right: 0.3em; }
-        /* 必填项星号 */
-        。form-group label span { color: var(--secondary); margin-left: 2px; }
-        /* 按钮内 SVG 对齐 */
-        。btn svg { margin-right: 0.4em; vertical-align: middle; }
-        /* 小按钮样式 */
-        。btn-small { padding: 0.4rem 0.9rem; font-size: 0.8rem; letter-spacing: 0.5px; }
-        。btn-small svg { width: 13px; height: 13px; }
-        /* 电影卡片动作按钮间距 */
-        。movie-actions .action-buttons .btn { margin-left: 0.5rem; }
-        /* 电影详情网格内项目间距 */
-        。movie-details-grid .meta-item { margin-bottom: 0.4rem; }
-        /* 详情项目内图标对齐 */
-        。meta-item svg { vertical-align: middle; margin-right: 0.4em; }
-        /* 空列表消息样式 */
-        。empty-message { grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; opacity: 0.5; font-style: italic; font-size: 1.1rem; border: 1px dashed var(--glass-border); border-radius: 4px; }
-        /* 分页跳转样式 */
-        。pagination-jump { display: flex; align-items: center; gap: 0.5rem; }
-        。pagination-jump input { width: 55px; padding: 0.4rem; font-size: 0.9rem; text-align: center; }
-        。pagination-jump button { padding: 0.4rem 0.8rem; }
-        /* 移动端分页样式调整 */
-        @media (max-width: 480px) { .pagination-info { display: none; } .pagination-jump input { width: 45px;} }
+        .spinner { animation: spin 1s linear infinite; fill: currentColor; width: 1em; height: 1em; vertical-align: text-bottom; margin-right: 0.3em; }
+
+        /* Required field asterisk */
+        .form-group label span { color: var(--secondary); margin-left: 2px; font-weight: bold; }
+
+        /* Glitch Text Effect Container */
+        .glitch-text { position: relative; }
+        .glitch-text::before, .glitch-text::after {
+            content: attr(data-text);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: inherit; /* Match background if needed */ color: inherit; overflow: hidden; pointer-events: none;
+        }
+        /* Glitch Layers & Animations */
+        .glitch-text::before { text-shadow: -1px 0 var(--secondary); animation: glitch-anim-1 2.5s infinite linear alternate-reverse; }
+        .glitch-text::after { text-shadow: 1px 0 var(--primary); animation: glitch-anim-2 3s infinite linear alternate-reverse; }
+        @keyframes glitch-anim-1 { 0%{clip-path:inset(40% 0 61% 0);transform:translateX(-2px)}10%{clip-path:inset(8% 0 54% 0)}20%{clip-path:inset(29% 0 49% 0)}30%{clip-path:inset(35% 0 18% 0)}40%{clip-path:inset(7% 0 84% 0)}50%{clip-path:inset(87% 0 1% 0);transform:translateX(2px)}60%{clip-path:inset(59% 0 6% 0)}70%{clip-path:inset(38% 0 52% 0)}80%{clip-path:inset(83% 0 13% 0)}90%{clip-path:inset(36% 0 60% 0)}100%{clip-path:inset(71% 0 2% 0);transform:translateX(-1px)} }
+        @keyframes glitch-anim-2 { 0%{clip-path:inset(82% 0 6% 0);transform:translateX(1px)}10%{clip-path:inset(46% 0 45% 0)}20%{clip-path:inset(6% 0 68% 0)}30%{clip-path:inset(74% 0 24% 0)}40%{clip-path:inset(51% 0 7% 0)}50%{clip-path:inset(18% 0 78% 0);transform:translateX(-1px)}60%{clip-path:inset(93% 0 3% 0)}70%{clip-path:inset(4% 0 92% 0)}80%{clip-path:inset(68% 0 9% 0)}90%{clip-path:inset(25% 0 70% 0)}100%{clip-path:inset(86% 0 8% 0);transform:translateX(2px)} }
+
+        /* Note: Most layout styles (list controls, modal structure, etc.)
+           are now handled in syberpoke.css for better performance and maintainability. */
     </style>
 </head>
 <body>
-    <!-- 固定在右上角的管理菜单容器 -->
+    <!-- Fixed top-right management menu container -->
     <div class="header-actions-fixed" id="headerActions">
-        <button id="manageMenuBtn" class="btn btn-outline btn-small" title="管理收藏">
-            <svg viewBox="0 0 24 24" width="14" height="14"> <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/> </svg>
+        <button id="manageMenuBtn" class="btn btn-outline btn-small" title="管理数据接口" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"> <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/> </svg>
             <span>管理</span>
         </button>
-        <div id="manageMenuDropdown" class="dropdown-menu">
-            <!-- 下拉菜单项，点击打开对应模态框或执行动作 -->
-            <a href="#" onclick="openModal('importCsvModal'); closeDropdown(); return false;">
-                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 20h14v-2H5v2zm0-10h4V6h6v4h4l-7 7-7-7z"/></svg> 导入 CSV
+        <div id="manageMenuDropdown" class="dropdown-menu" role="menu">
+            <!-- Dropdown items -->
+            <a href="#" role="menuitem" onclick="openModal('importCsvModal'); closeDropdown(); return false;">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 20h14v-2H5v2zm0-10h4V6h6v4h4l-7 7-7-7z"/></svg> 导入数据链 (CSV)
             </a>
-            <a href="#" onclick="openModal('addMovieModal'); closeDropdown(); return false;">
-               <svg viewBox="0 0 24 24" width="16" height="16"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 添加电影
+            <a href="#" role="menuitem" onclick="openModal('addMovieModal'); closeDropdown(); return false;">
+               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 植入新记忆 (添加)
             </a>
-            <a href="#" onclick="exportCSV(); closeDropdown(); return false;">
-                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> 导出 CSV
+            <a href="#" role="menuitem" onclick="exportCSV(); closeDropdown(); return false;">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> 导出数据链 (CSV)
             </a>
-            <a href="#" id="deleteSelectedMenuItem" class="dropdown-item-disabled" onclick="if(!this.classList.contains('dropdown-item-disabled')) { deleteSelectedMovies(); closeDropdown(); } return false;">
-                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> 删除选中
+            <a href="#" role="menuitem" id="deleteSelectedMenuItem" class="dropdown-item-disabled" onclick="if(!this.classList.contains('dropdown-item-disabled')) { deleteSelectedMovies(); closeDropdown(); } return false;" aria-disabled="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> 清除选中片段
             </a>
-            <hr class="dropdown-divider"> <!-- 分隔线 -->
-            <a href="#" onclick="openModal('settingsModal'); closeDropdown(); return false;">
-                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69-.98l-2.49-1c-.23-.08-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
-                设置
+            <hr class="dropdown-divider"> <!-- Separator -->
+            <a href="#" role="menuitem" onclick="openModal('settingsModal'); closeDropdown(); return false;">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69-.98l-2.49-1c-.23-.08-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+                系统设置
             </a>
         </div>
     </div>
-    <!-- 管理菜单容器结束 -->
+    <!-- End Management Menu -->
 
     <div class="container">
         <header class="header">
-            <!-- 移除了右上角按钮容器 -->
-            <h1>电影收藏馆</h1>
-            <p>已收藏 <span class="movie-count" id="movieCount">0</span> 部电影</p>
+            <!-- Glitch effect requires data-text attribute -->
+            <h1 data-text="意识存储矩阵" class="glitch-text">意识存储矩阵</h1>
+            <p>当前检索到 <span class="movie-count" id="movieCount">0</span> 条意识片段</p> <!-- Updated Text -->
             <hr>
         </header>
 
         <main>
-            <!-- 电影收藏列表区域 -->
+            <!-- Movie Collection List Area -->
             <section class="card" id="my-collection-section" style="animation-delay: 0.3s">
-                 <h2 class="sticky-header"> <!-- 吸顶标题 -->
-                    <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
-                    我的电影收藏
+                 <h2 class="sticky-header"> <!-- Sticky Header -->
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+                    意识档案库
                 </h2>
-                <div class="movie-actions-bar"> <!-- 列表操作栏，现在只有“全选” -->
+
+                <!-- Action Bar -->
+                <div class="movie-actions-bar">
                     <div class="select-all-container">
-                        <input type="checkbox" id="selectAll" class="checkbox-input">
-                        <label for="selectAll">全选</label>
+                        <input type="checkbox" id="selectAll" class="checkbox-input" aria-label="全选当前页所有片段">
+                        <label for="selectAll">全选当前页</label>
                     </div>
-                    <div></div> <!-- 空 div 用于 flex 对齐 -->
+                    <div class="list-controls">
+                         <div class="search-container">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                            <input type="search" id="searchInput" class="form-control" placeholder="检索关键词..." aria-label="按关键词检索片段">
+                        </div>
+                        <!-- Genre Filter -->
+                        <select id="genreFilter" class="form-control" title="按类型筛选" aria-label="按类型协议筛选">
+                            <option value="">所有类型协议</option>
+                            <!-- Genre options dynamically populated by JS -->
+                        </select>
+                        <!-- Sort Selector -->
+                        <select id="sortSelect" class="form-control" title="排序序列" aria-label="选择片段排序方式">
+                            <option value="ratingDate_desc">访问日期 (新→旧)</option>
+                            <option value="ratingDate_asc">访问日期 (旧→新)</option>
+                            <option value="rating_desc">神经评分 (高→低)</option>
+                            <option value="rating_asc">神经评分 (低→高)</option>
+                            <option value="title_asc">标识符 (A→Z)</option>
+                            <option value="title_desc">标识符 (Z→A)</option>
+                            <option value="year_desc">发行纪年 (新→旧)</option>
+                            <option value="year_asc">发行纪年 (旧→新)</option>
+                            <option value="added_desc">植入日期 (新→旧)</option>
+                            <option value="added_asc">植入日期 (旧→新)</option>
+                        </select>
+                    </div>
                 </div>
+                <!-- End Action Bar -->
+
+                <!-- Movie List Container -->
                 <div class="movie-list" id="movieList">
-                    <!-- 电影卡片由 JS 渲染 -->
+                    <!-- Movie cards rendered by JS (structure simplified in JS) -->
+                    <!-- Example Placeholder (removed by JS render): -->
+                    <!-- <p class="empty-message">正在加载意识档案...</p> -->
                 </div>
-                <div class="pagination" id="pagination">
-                    <!-- 分页控件 -->
-                     <button class="btn btn-outline pagination-btn btn-small" id="prevPage" disabled><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg> 上一页</button>
-                     <div class="pagination-info">第 <span id="currentPage">1</span> / <span id="totalPages">1</span> 页</div>
-                     <div class="pagination-jump"><input type="number" id="jumpPage" class="form-control" min="1" placeholder="页"><button class="btn btn-outline pagination-btn btn-small" onclick="jumpToPage()">跳转</button></div>
-                     <button class="btn btn-outline pagination-btn btn-small" id="nextPage" disabled>下一页 <svg viewBox="0 0 24 24"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg></button>
+                <!-- Pagination Controls -->
+                <div class="pagination" id="pagination" role="navigation" aria-label="分页导航">
+                     <button class="btn btn-outline pagination-btn btn-small" id="prevPage" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg> 上一页</button>
+                     <div class="pagination-info" aria-live="polite">第 <span id="currentPage">1</span> / <span id="totalPages">1</span> 页</div>
+                     <div class="pagination-jump">
+                         <label for="jumpPage" class="visually-hidden">跳转到页码</label> <!-- Hidden label for accessibility -->
+                         <input type="number" id="jumpPage" class="form-control" min="1" placeholder="跳转" aria-label="输入页码跳转">
+                         <button class="btn btn-outline pagination-btn btn-small" onclick="jumpToPage()">确认</button>
+                    </div>
+                     <button class="btn btn-outline pagination-btn btn-small" id="nextPage" disabled>下一页 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg></button>
                 </div>
             </section>
         </main>
 
         <footer class="footer">
-             <p>更新于 <span id="currentDate"></span> | By 段绪程 | 20223535@csuft.edu.cn</p>
+             <p>数据流同步于 <span id="currentDate"></span> | 协议执行者：段绪程 | 接入点: 2253864680@qq.com</p>
         </footer>
     </div>
 
-    <!-- ================== 模态框区域 ================== -->
+    <!-- ================== MODAL AREA ================== -->
 
-    <!-- 编辑电影模态框 -->
-    <div class="modal-overlay" id="editMovieModal">
+    <!-- Edit Movie Modal -->
+    <div class="modal-overlay" id="editMovieModal" role="dialog" aria-modal="true" aria-labelledby="editMovieModalTitle">
          <div class="modal-container">
-            <div class="modal-header"> <h3 class="modal-title">编辑电影</h3> <button class="modal-close" onclick="closeModal('editMovieModal')">×</button> </div>
+            <div class="modal-header">
+                <h3 class="modal-title" id="editMovieModalTitle">编辑意识片段</h3>
+                <button class="modal-close" onclick="closeModal('editMovieModal')" aria-label="关闭编辑窗口">×</button>
+            </div>
             <div class="modal-body">
-                <form id="editMovieForm"> <input type="hidden" id="editMovieId">
-                    <div class="form-grid">
-                        <div class="form-group"><label for="editTitle">名称<span>*</span></label><input type="text" id="editTitle" class="form-control" required></div>
-                        <div class="form-group"><label for="editDirector">导演</label><input type="text" id="editDirector" class="form-control"></div>
-                        <div class="form-group"><label for="editYear">年份</label><input type="number" id="editYear" class="form-control" min="1880" max="2099"></div>
-                        <div class="form-group"><label for="editRating">评分</label><input type="number" id="editRating" class="form-control" min="0" max="10" step="0.1"></div>
+                <form id="editMovieForm" onsubmit="event.preventDefault(); saveMovieEdit();"> <!-- Prevent default submit, call save function -->
+                    <input type="hidden" id="editMovieId">
+                    <div class="form-grid"> <!-- Use grid for layout if defined in CSS, else flex/block -->
+                        <div class="form-group">
+                            <label for="editTitle">片段标识符<span>*</span></label>
+                            <input type="text" id="editTitle" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editDirector">信息源 (导演)</label>
+                            <input type="text" id="editDirector" class="form-control">
+                        </div>
+                    </div>
+                     <div class="form-grid">
+                        <div class="form-group">
+                            <label for="editYear">发行纪年</label>
+                            <input type="number" id="editYear" class="form-control" min="1880" max="2099" placeholder="例如: 2023">
+                        </div>
+                        <div class="form-group">
+                            <label for="editRating">神经评分 (0-10)</label> <!-- Corrected range label -->
+                            <input type="number" id="editRating" class="form-control" min="0" max="10" step="0.1" placeholder="例如: 8.5">
+                        </div>
                     </div>
                     <div class="form-grid">
-                        <div class="form-group"><label for="editRatingDate">观影日期</label><input type="date" id="editRatingDate" class="form-control"></div>
-                        <div class="form-group"><label for="editCountry">国家/地区</label><input type="text" id="editCountry" class="form-control"></div>
-                        <div class="form-group"><label for="editLink">链接 (豆瓣等)</label><input type="url" id="editLink" class="form-control" placeholder="例：https://movie.douban.com/subject/..."></div>
-                        <div class="form-group"><label for="editCoverUrl">海报URL</label><input type="url" id="editCoverUrl" class="form-control" placeholder="例：https://img_url..."></div>
+                        <div class="form-group">
+                            <label for="editRatingDate">访问日期</label>
+                            <input type="date" id="editRatingDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="editCountry">来源地区</label>
+                            <input type="text" id="editCountry" class="form-control">
+                        </div>
                     </div>
-                    <div class="form-group"><label for="editReview">短评</label><textarea id="editReview" class="form-control" rows="3"></textarea></div>
+                    <div class="form-grid">
+                         <div class="form-group">
+                            <label for="editLink">数据接口 (链接)</label>
+                            <input type="url" id="editLink" class="form-control" placeholder="例：https://movie.douban.com/subject/...">
+                        </div>
+                        <div class="form-group">
+                            <label for="editCoverUrl">视觉快照 (海报URL)</label>
+                            <input type="url" id="editCoverUrl" class="form-control" placeholder="例：https://image.tmdb.org/...">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editReview">个人日志 (短评)</label>
+                        <textarea id="editReview" class="form-control" rows="3"></textarea>
+                    </div>
                 </form>
             </div>
-            <div class="modal-footer"> <button type="button" class="btn btn-outline" onclick="closeModal('editMovieModal')">取消</button> <button type="button" class="btn btn-primary" onclick="saveMovieEdit()">保存</button> </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editMovieModal')">取消修改</button>
+                <!-- Changed to type="submit" to trigger form's onsubmit -->
+                <button type="submit" form="editMovieForm" class="btn btn-primary">保存覆写</button>
+            </div>
         </div>
     </div>
 
-    <!-- 导入 CSV 模态框 -->
-    <div class="modal-overlay" id="importCsvModal">
+    <!-- Import CSV Modal -->
+    <div class="modal-overlay" id="importCsvModal" role="dialog" aria-modal="true" aria-labelledby="importCsvModalTitle">
          <div class="modal-container">
-            <div class="modal-header"> <h3 class="modal-title">导入 CSV</h3> <button class="modal-close" onclick="closeModal('importCsvModal')">×</button> </div>
+            <div class="modal-header">
+                <h3 class="modal-title" id="importCsvModalTitle">导入数据链 (CSV)</h3>
+                <button class="modal-close" onclick="closeModal('importCsvModal')" aria-label="关闭导入窗口">×</button>
+             </div>
             <div class="modal-body">
                  <div class="csv-upload">
-                    <input type="file" id="modalFileInput" class="file-input" accept=".csv">
+                    <input type="file" id="modalFileInput" class="file-input" accept=".csv,.txt"> <!-- Allow .txt as well -->
                     <label for="modalFileInput" class="btn btn-outline file-label">
-                        <svg viewBox="0 0 24 24" width="16" height="16"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 选择CSV文件
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 选择数据文件
                     </label>
                     <span id="modalFileName" class="file-name">未选择文件</span>
                 </div>
-                <small>格式: 电影/电视剧/番组, 个人评分, 打分日期, 我的短评, 上映日期, 制片国家, 条目链接, 导演, 海报URL (UTF-8)</small>
+                <small><strong>支持列:</strong> 片段标识符*, 神经评分, 访问日期, 个人日志, 发行纪年, 来源地区, 数据接口, 信息源, 视觉快照URL (*必需)</small><br>
+                <small style="display:block; margin-top: 5px; opacity: 0.7;">使用 UTF-8 编码。类型和摘要将尝试通过TMDb获取。</small>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline" onclick="closeModal('importCsvModal')">取消</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('importCsvModal')">取消接入</button>
                 <button type="button" class="btn btn-primary" id="importCsvBtnInModal" onclick="importCSV()">
-                    <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 20h14v-2H5v2zm0-10h4V6h6v4h4l-7 7-7-7z"/></svg> 开始导入
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 20h14v-2H5v2zm0-10h4V6h6v4h4l-7 7-7-7z"/></svg> 开始注入
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- 添加电影模态框 -->
-    <div class="modal-overlay" id="addMovieModal">
+    <!-- Add Movie Modal -->
+    <div class="modal-overlay" id="addMovieModal" role="dialog" aria-modal="true" aria-labelledby="addMovieModalTitle">
          <div class="modal-container">
-            <div class="modal-header"> <h3 class="modal-title">添加电影</h3> <button class="modal-close" onclick="closeModal('addMovieModal')">×</button> </div>
+            <div class="modal-header">
+                <h3 class="modal-title" id="addMovieModalTitle">植入新记忆</h3>
+                <button class="modal-close" onclick="closeModal('addMovieModal')" aria-label="关闭添加窗口">×</button>
+             </div>
             <div class="modal-body">
+                <!-- Changed to trigger addMovie via JS on submit -->
                 <form id="addMovieFormModal" onsubmit="addMovie(event); return false;">
                     <div class="form-group">
-                        <label for="modalTitle">电影名称 <span>*</span></label>
+                        <label for="modalTitle">片段标识符 <span>*</span></label>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
-                             <input type="text" id="modalTitle" class="form-control" required style="flex-grow: 1;" placeholder="输入电影的准确名称">
-                             <button type="button" class="btn btn-outline btn-small" onclick="searchDoubanFromModal()" title="去豆瓣搜索此电影">
-                                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg> 豆瓣
+                             <input type="text" id="modalTitle" class="form-control" required style="flex-grow: 1;" placeholder="输入准确的电影/剧集/番组名称...">
+                             <button type="button" class="btn btn-outline btn-small" onclick="searchDoubanFromModal()" title="跳转至豆瓣数据库检索">
+                                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg> 豆瓣
                              </button>
                         </div>
-                        <small>输入名称后可点按钮去豆瓣查找链接，在编辑时添加。</small>
+                        <small>输入后可跳转至外部数据库搜索。TMDb 信息将在保存时自动获取 (如果配置了密钥)。</small>
                     </div>
                      <div class="form-grid">
                         <div class="form-group">
-                            <label for="modalRating">个人评分 (0-5)</label>
-                            <input type="number" id="modalRating" class="form-control" min="0" max="10" step="0.1">
+                            <label for="modalRating">神经评分 (0-10)</label> <!-- Corrected range label -->
+                            <input type="number" id="modalRating" class="form-control" min="0" max="10" step="0.1" placeholder="选填">
                         </div>
                         <div class="form-group">
-                            <label for="modalRatingDate">观影日期</label>
+                            <label for="modalRatingDate">访问日期</label>
                             <input type="date" id="modalRatingDate" class="form-control">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="modalReview">我的短评</label>
-                        <textarea id="modalReview" class="form-control" rows="3" placeholder="记录你的想法..."></textarea>
+                        <label for="modalReview">个人日志</label>
+                        <textarea id="modalReview" class="form-control" rows="3" placeholder="记录你的想法...(选填)"></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                 <button type="button" class="btn btn-outline" onclick="closeModal('addMovieModal')">取消</button>
+                 <button type="button" class="btn btn-outline" onclick="closeModal('addMovieModal')">放弃植入</button>
+                 <!-- Button type="button" is fine here, JS triggers submit via element.requestSubmit() or direct call -->
                  <button type="button" class="btn btn-primary" id="addMovieBtnInModal" onclick="document.getElementById('addMovieFormModal').requestSubmit();">
-                    <svg viewBox="0 0 24 24" width="16" height="16"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg> 添加电影
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg> 确认植入
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- 设置模态框 -->
-    <div class="modal-overlay" id="settingsModal">
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
          <div class="modal-container" style="max-width: 600px;">
-            <div class="modal-header"> <h3 class="modal-title">设置</h3> <button class="modal-close" onclick="closeModal('settingsModal')">×</button> </div>
+            <div class="modal-header">
+                <h3 class="modal-title" id="settingsModalTitle">系统设置</h3>
+                <button class="modal-close" onclick="closeModal('settingsModal')" aria-label="关闭设置窗口">×</button>
+             </div>
             <div class="modal-body">
                  <div class="form-group">
-                    <label for="modalTmdbApiKey">TMDb API Key (v3认证)</label>
-                    <input type="password" id="modalTmdbApiKey" class="form-control" placeholder="粘贴你的 TMDb API Key 并保存">
-                    <button class="btn btn-outline" onclick="saveTmdbApiKey()" style="margin-top: 0.8rem;">保存 Key</button>
+                    <label for="modalTmdbApiKey">外部数据接口密钥 (TMDb v3)</label>
+                    <!-- Changed type to text to allow user to see what they pasted -->
+                    <input type="text" id="modalTmdbApiKey" class="form-control" placeholder="在此处粘贴密钥并保存">
+                    <button type="button" class="btn btn-outline" onclick="saveTmdbApiKey()" style="margin-top: 0.8rem;">保存密钥</button>
                     <small style="display: block; margin-top: 0.5rem; opacity: 0.7;">
-                        API Key 保存在本地。 <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">获取Key</a>.
-                        <strong style="color: var(--secondary);">请勿在公共环境使用！</strong>
+                        密钥保存在浏览器本地存储中。 <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer" title="跳转至 TMDb 官方获取密钥">如何获取密钥?</a>.
+                        <strong style="color: var(--secondary);"> 请勿在公共设备或网络上使用。</strong>
                     </small>
                 </div>
                  <hr class="dropdown-divider" style="margin: 2rem 0;">
                  <div class="form-group">
-                     <label>批量操作</label>
-                    <button class="btn btn-primary" id="fetchAllBtnInModal" onclick="fetchAllMissingDetails()">
-                        <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 为无详情电影获取信息
+                     <label>批量处理协议</label>
+                    <button type="button" class="btn btn-primary" id="fetchAllBtnInModal" onclick="fetchAllMissingDetails()">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 补全缺失数据片段
                     </button>
-                     <small style="display: block; margin-top: 0.5rem; opacity: 0.7;">为缺少海报/导演/年份/国家的电影尝试从TMDb获取。</small>
+                     <small style="display: block; margin-top: 0.5rem; opacity: 0.7;">使用已保存的TMDb密钥，尝试为缺少海报/导演/年份/地区/类型/摘要的片段获取信息。</small>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline" onclick="closeModal('settingsModal')">关闭</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('settingsModal')">关闭终端</button>
             </div>
         </div>
     </div>
-    <!-- 模态框区域结束 -->
 
+    <!-- Movie Detail Modal (Structure optimized in CSS) -->
+    <div class="modal-overlay" id="movieDetailModal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title" id="detailTitle">片段详情</h3> <!-- Generic title -->
+                <button class="modal-close" onclick="closeModal('movieDetailModal')" aria-label="关闭详情窗口">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- Left Poster Container -->
+                <div id="detailPosterContainer">
+                    <!-- Set initial src to default poster BASE64 -->
+                    <img id="detailPoster" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNFNkYyRkYiIHN0cm9rZT0iIzRhNGI2ZSIgc3Ryb2tlLXdpZHRoPSIxIj48cmVjdCB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHg9IjMiIHk9IjMiIHJ4PSIyIiByeT0iMiIgc3Ryb2tlPSIjOWVhNmJjIiBmaWxsPSIjMmEyYjQ1Ii8+PHBhdGggZD0iTTMgMTJsNi02IDYgNi0zIDMiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlPSIjOWVhNmJjIi8+PGNpcmNsZSBjeD0iOSIgY3k9IjkiIHI9IjEiIGZpbGw9IiM5ZWE2YmMiLz48dGV4dCB4PSI1MHUiIHk9IjcwJSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0iI2U2ZjJmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+" alt="视觉快照加载中..." loading="lazy">
+                </div>
+                <!-- Right Info Container -->
+                <div id="detailInfo">
+                    <!-- Full Title (Set by JS) -->
+                    <h3 id="detailFullTitle">片段标识符加载中...</h3>
+                    <!-- Meta Data Block -->
+                    <div class="detail-block" id="detailMeta">
+                        <label>核心参数:</label>
+                        <!-- Meta items (Year, Director, Country) populated by JS -->
+                    </div>
+                    <!-- Rating Block -->
+                    <div class="detail-block" id="detailRatingContainer">
+                        <label>神经评分:</label>
+                         <span id="detailRating">
+                             <!-- Rating populated by JS -->
+                             <span class="placeholder" style="font-size: 1rem; font-style: italic;">加载中...</span>
+                         </span>
+                    </div>
+                    <!-- Genres Block (Initially hidden via CSS if empty) -->
+                    <div class="detail-block" id="detailGenresContainer" style="display: none;"> <!-- Hide initially -->
+                        <label>类型协议:</label>
+                        <div id="detailGenres"></div> <!-- Genres populated by JS -->
+                    </div>
+                    <!-- Overview Block (Initially hidden via CSS if empty) -->
+                    <div class="detail-block" id="detailOverviewContainer" style="display: none;"> <!-- Hide initially -->
+                        <label>核心摘要:</label>
+                        <p id="detailOverview"></p> <!-- Overview populated by JS -->
+                    </div>
+                    <!-- Divider -->
+                    <hr class="dropdown-divider" style="margin: 0.5rem 0;"> <!-- Adjusted margin -->
+                    <!-- User Content Block -->
+                    <div class="detail-block" id="detailUserContent">
+                         <label>个人日志:</label>
+                         <p id="detailUserReview"></p> <!-- User review populated by JS -->
+                         <p id="detailUserRatingDate" style="display: none;"></p> <!-- User rating date populated by JS, hidden initially -->
+                    </div>
+                    <!-- Link Block (Initially hidden via CSS if empty) -->
+                    <div class="detail-block" id="detailLinkContainer" style="display: none;"> <!-- Hide initially -->
+                         <!-- Link button populated by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                 <button type="button" class="btn btn-outline" onclick="closeModal('movieDetailModal')">关闭视图</button>
+                 <button type="button" class="btn btn-primary" id="editFromDetailBtn">
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    编辑此片段
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- End Modal Area -->
+
+    <!-- Load JavaScript -->
     <script src="js/movie.js"></script>
+     <!-- Add visually hidden class for accessibility labels -->
+     <style>.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
 </body>
 </html>
