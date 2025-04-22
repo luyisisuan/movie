@@ -11,21 +11,21 @@
     <style>
         /* Loading Spinner Animation */
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .spinner { animation: spin 1s linear infinite; fill: currentColor; width: 1em; height: 1em; vertical-align: text-bottom; margin-right: 0.3em; }
+        。spinner { animation: spin 1s linear infinite; fill: currentColor; width: 1em; height: 1em; vertical-align: text-bottom; margin-right: 0.3em; }
 
         /* Required field asterisk */
-        .form-group label span { color: var(--secondary); margin-left: 2px; font-weight: bold; }
+        。form-group label span { color: var(--secondary); margin-left: 2px; font-weight: bold; }
 
         /* Glitch Text Effect Container */
-        .glitch-text { position: relative; }
-        .glitch-text::before, .glitch-text::after {
+        。glitch-text { position: relative; }
+        。glitch-text::before, .glitch-text::after {
             content: attr(data-text);
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: inherit; /* Match background if needed */ color: inherit; overflow: hidden; pointer-events: none;
         }
         /* Glitch Layers & Animations */
-        .glitch-text::before { text-shadow: -1px 0 var(--secondary); animation: glitch-anim-1 2.5s infinite linear alternate-reverse; }
-        .glitch-text::after { text-shadow: 1px 0 var(--primary); animation: glitch-anim-2 3s infinite linear alternate-reverse; }
+        。glitch-text::before { text-shadow: -1px 0 var(--secondary); animation: glitch-anim-1 2.5s infinite linear alternate-reverse; }
+        。glitch-text::after { text-shadow: 1px 0 var(--primary); animation: glitch-anim-2 3s infinite linear alternate-reverse; }
         @keyframes glitch-anim-1 { 0%{clip-path:inset(40% 0 61% 0);transform:translateX(-2px)}10%{clip-path:inset(8% 0 54% 0)}20%{clip-path:inset(29% 0 49% 0)}30%{clip-path:inset(35% 0 18% 0)}40%{clip-path:inset(7% 0 84% 0)}50%{clip-path:inset(87% 0 1% 0);transform:translateX(2px)}60%{clip-path:inset(59% 0 6% 0)}70%{clip-path:inset(38% 0 52% 0)}80%{clip-path:inset(83% 0 13% 0)}90%{clip-path:inset(36% 0 60% 0)}100%{clip-path:inset(71% 0 2% 0);transform:translateX(-1px)} }
         @keyframes glitch-anim-2 { 0%{clip-path:inset(82% 0 6% 0);transform:translateX(1px)}10%{clip-path:inset(46% 0 45% 0)}20%{clip-path:inset(6% 0 68% 0)}30%{clip-path:inset(74% 0 24% 0)}40%{clip-path:inset(51% 0 7% 0)}50%{clip-path:inset(18% 0 78% 0);transform:translateX(-1px)}60%{clip-path:inset(93% 0 3% 0)}70%{clip-path:inset(4% 0 92% 0)}80%{clip-path:inset(68% 0 9% 0)}90%{clip-path:inset(25% 0 70% 0)}100%{clip-path:inset(86% 0 8% 0);transform:translateX(2px)} }
 
@@ -290,7 +290,7 @@
                     <input type="text" id="modalTmdbApiKey" class="form-control" placeholder="在此处粘贴密钥并保存">
                     <button type="button" class="btn btn-outline" onclick="saveTmdbApiKey()" style="margin-top: 0.8rem;">保存密钥</button>
                     <small style="display: block; margin-top: 0.5rem; opacity: 0.7;">
-                        密钥保存在浏览器本地存储中。(dee2d534f6d7b1d23fa5bfa24cf01f3a) <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer" title="跳转至 TMDb 官方获取密钥">如何获取密钥?</a>.
+                        密钥保存(dee2d534f6d7b1d23fa5bfa24cf01f3a)在浏览器本地存储中。 <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer" title="跳转至 TMDb 官方获取密钥">如何获取密钥?</a>.
                         <strong style="color: var(--secondary);"> 请勿在公共设备或网络上使用。</strong>
                     </small>
                 </div>
