@@ -1199,4 +1199,4 @@ function init() {
 
 // --- Run Initialization ---
 // Use DOMContentLoaded to ensure the DOM is ready before running scripts
-document。addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', init);
