@@ -1,21 +1,22 @@
 // =============================================
-//     电影收藏馆 - JavaScript v3.8
-// 功能: 顶部固定下拉管理菜单(含导出/删除), 模态框操作, 自动获取详情,
-//       按观影日期排序, 编辑时可选评分日期, 全选删除, CSV导入导出, 豆瓣搜索按钮
-// 注释: 全部中文
+//     电影收藏馆 - JavaScript v3.12 (性能优化 v1)
+// 功能: 详情弹窗, 简化卡片, 类型筛选, 搜索, 排序, TMDb 获取, CSV, 中文界面
+// 优化: 减少 localStorage 解析, 使用 DocumentFragment 优化渲染
 // =============================================
 
 // --- 全局变量与常量 ---
 let currentPage = 1; // 当前页码
 const moviesPerPage = 6; // 每页显示电影数量
-const TMDB_POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500'; // TMDb 海报基础 URL (w500 尺寸)
-const TMDB_API_KEY_STORAGE_KEY = 'tmdbApiKey'; // localStorage 中存储 API Key 的键名
-const DEFAULT_POSTER_URL = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNFNkYyRkYiIHN0cm9rZT0iIzRhNGI2ZSIgc3Ryb2tlLXdpZHRoPSIxIj48cmVjdCB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHg9IjMiIHk9IjMiIHJ4PSIyIiByeT0iMiIgc3Ryb2tlPSIjOWVhNmJjIiBmaWxsPSIjMmEyYjQ1Ii8+PHBhdGggZD0iTTMgMTJsNi02IDYgNi0zIDMiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlPSIjOWVhNmJjIi8+PGNpcmNsZSBjeD0iOSIgY3k9IjkiIHI9IjEiIGZpbGw9IiM5ZWE2YmMiLz48dGV4dCB4PSI1MHUiIHk9IjcwJSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0iI2U2ZjJmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'; // 默认海报 SVG
+const TMDB_POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500'; // TMDb 海报基础 URL
+const TMDB_API_KEY_STORAGE_KEY = 'tmdbApiKey'; // localStorage 存储键名
+const DEFAULT_POSTER_URL = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNFNkYyRkYiIHN0cm9rZT0iIzRhNGI2ZSIgc3Ryb2tlLXdpZHRoPSIxIj48cmVjdCB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHg9IjMiIHk9IjMiIHJ4PSIyIiByeT0iMiIgc3Ryb2tlPSIjOWVhNmJjIiBmaWxsPSIjMmEyYjQ1Ii8+PHBhdGggZD0iTTMgMTJsNi02IDYgNi0zIDMiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlPSIjOWVhNmJjIi8+PGNpcmNsZSBjeD0iOSIgY3k9IjkiIHI9IjEiIGZpbGw9IiM5ZWE2YmMiLz48dGV4dCB4PSI1MHUiIHk9IjcwJSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0iI2U2ZjJmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'; // 默认海报
+
+// 筛选与排序状态
+let currentSearchTerm = ''; // 当前搜索词
+let currentSortOrder = 'ratingDate_desc'; // 当前排序方式
+let currentGenreFilter = ''; // 当前类型筛选
 
 // --- 初始化与基础功能 ---
-/**
- * 初始化本地存储，如果 'movies' 键不存在，则创建一个空数组字符串。
- */
 function initStorage() {
     if (!localStorage.getItem('movies')) {
         localStorage.setItem('movies', JSON.stringify([]));
@@ -23,588 +24,982 @@ function initStorage() {
 }
 
 // --- TMDb API 相关功能 ---
-/**
- * 从本地存储获取 TMDb API Key。
- * @returns {string | null} API Key 字符串或 null。
- */
 function getTmdbApiKey() {
     return localStorage.getItem(TMDB_API_KEY_STORAGE_KEY);
 }
 
-/**
- * 保存用户在设置模态框中输入的 TMDb API Key 到本地存储。
- */
 function saveTmdbApiKey() {
-    const input = document.getElementById('modalTmdbApiKey'); // 获取模态框内的输入元素
+    const input = document.getElementById('modalTmdbApiKey');
     const key = input.value.trim();
     if (key) {
-        if (/^[a-z0-9]{32}$/i.test(key)) { // 简单验证32位字母数字格式
-            localStorage.setItem(TMDB_API_KEY_STORAGE_KEY, key);
-            alert('API Key 已保存。'); // 中文提示
-            input.placeholder = "API Key 已保存 (如需更改请重新输入)"; // 更新占位符提示
-        } else {
-            alert('API Key 格式错误 (应为32位字母或数字)。'); // 中文提示
-        }
+        // Relaxed validation: allow any non-empty key, TMDb API will validate it
+        // if (/^[a-z0-9]{32}$/i.test(key)) { // Original stricter validation
+        localStorage.setItem(TMDB_API_KEY_STORAGE_KEY, key);
+        alert('API 密钥已保存。');
+        input.placeholder = "密钥已保存 (输入新密钥覆盖)";
+        // } else {
+        //     alert('密钥格式错误 (应为32位字母或数字)。');
+        // }
     } else {
-        localStorage.removeItem(TMDB_API_KEY_STORAGE_KEY); // 清除 Key
-        input.placeholder = "粘贴你的 TMDb API Key 并保存"; // 恢复默认占位符
-        alert('API Key 已清除。自动获取详情功能将停用。'); // 中文提示
+        localStorage.removeItem(TMDB_API_KEY_STORAGE_KEY);
+        input.placeholder = "在此处粘贴密钥并保存";
+        alert('API 密钥已清除。获取详情功能将停用。');
     }
 }
 
-/**
- * 使用电影标题从 TMDb 获取电影详情 (海报, 导演, 年份, 国家)。
- * @param {string} title - 要搜索的电影标题。
- * @returns {Promise<{posterUrl: string|null, director: string|null, year: number|null, country: string|null}>} 包含详情的对象，失败则值为 null。
- */
 async function fetchMovieDetailsFromTmdb(title) {
     const apiKey = getTmdbApiKey();
-    const result = { posterUrl: null, director: null, year: null, country: null };
+    const result = { posterUrl: null, director: null, year: null, country: null, genres: [], overview: null };
     if (!apiKey || !title) {
-        console.warn('获取 TMDb 详情失败：缺少 API Key 或电影标题。');
+        console.warn('获取 TMDb 详情失败：缺少 API 密钥或标题。');
         return result;
     }
-
-    // 1. 搜索电影以获取 TMDb ID
-    const searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(title)}&language=zh-CN&include_adult=false`;
+    // Prioritize Chinese results, but allow fallback if title is specific enough
+    const searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(title)}&language=zh-CN,en-US&include_adult=false`;
     let movieId = null;
+
     try {
         const searchRes = await fetch(searchUrl);
         if (!searchRes.ok) throw new Error(`TMDb 搜索 API 错误 (${searchRes.status})`);
         const searchData = await searchRes.json();
+
         if (!searchData.results?.length) {
             console.log(`未能为 "${title}" 找到 TMDb 匹配项。`);
             return result;
         }
-        movieId = searchData.results[0].id; // 获取第一个匹配结果的 ID
+        // Basic matching logic (first result) - could be improved with year matching etc. if needed
+        movieId = searchData.results[0].id;
+
     } catch (err) {
         console.error(`TMDb 搜索 "${title}" 时出错:`, err);
         return result;
     }
 
-    // 2. 使用 ID 获取电影详情和演职员信息
     if (movieId) {
-        const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=zh-CN&append_to_response=credits`; // 同时请求演职员信息
+        const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=zh-CN,en-US&append_to_response=credits,release_dates`;
         try {
             const detailsRes = await fetch(detailsUrl);
             if (!detailsRes.ok) throw new Error(`TMDb 详情 API 错误 (${detailsRes.status})`);
-            const d = await detailsRes.json(); // 电影详情数据
+            const d = await detailsRes.json();
 
-            if (d.poster_path) result.posterUrl = TMDB_POSTER_BASE_URL + d.poster_path; // 构建海报 URL
-            if (d.release_date) result.year = parseInt(d.release_date.substring(0, 4)) || null; // 提取年份
-            // 提取国家/地区 (优先中国/美国，否则取第一个)
+            if (d.poster_path) result.posterUrl = TMDB_POSTER_BASE_URL + d.poster_path;
+
+            // Year: Prioritize official release date in primary regions if available
+            let releaseYear = null;
+            if (d.release_dates?.results) {
+                 const usRelease = d.release_dates.results.find(r => r.iso_3166_1 === 'US');
+                 const cnRelease = d.release_dates.results.find(r => r.iso_3166_1 === 'CN');
+                 const releaseInfo = usRelease || cnRelease || d.release_dates.results[0];
+                 if(releaseInfo?.release_dates?.length > 0) {
+                     const officialRelease = releaseInfo.release_dates.find(rd => rd.type === 3); // Type 3 is often theatrical
+                     if (officialRelease?.release_date) {
+                         releaseYear = parseInt(officialRelease.release_date.substring(0, 4));
+                     } else if (releaseInfo.release_dates[0]?.release_date) {
+                          releaseYear = parseInt(releaseInfo.release_dates[0].release_date.substring(0, 4));
+                     }
+                 }
+            }
+            // Fallback to general release_date if specific region data unavailable or empty
+             if (!releaseYear && d.release_date) {
+                 releaseYear = parseInt(d.release_date.substring(0, 4));
+             }
+             result.year = releaseYear || null;
+
+
             if (d.production_countries?.length > 0) {
-                const country = d.production_countries.find(c => c.iso_3166_1 === 'CN') || d.production_countries.find(c => c.iso_3166_1 === 'US') || d.production_countries[0];
+                // Prefer specific common countries, then first listed
+                const country = d.production_countries.find(c => c.iso_3166_1 === 'CN') ||
+                                d.production_countries.find(c => c.iso_3166_1 === 'US') ||
+                                d.production_countries.find(c => c.iso_3166_1 === 'JP') ||
+                                d.production_countries.find(c => c.iso_3166_1 === 'KR') ||
+                                d.production_countries.find(c => c.iso_3166_1 === 'GB') ||
+                                d.production_countries[0];
                 result.country = country?.name || null;
             }
-            // 提取导演 (从演职员列表筛选)
+
             if (d.credits?.crew) {
                 const directors = d.credits.crew.filter(c => c.job === 'Director');
-                if (directors.length > 0) result.director = directors.map(dir => dir.name).join(', '); // 拼接多个导演
+                if (directors.length > 0) result.director = directors.map(dir => dir.name).join(', ');
             }
+            if (d.genres?.length > 0) result.genres = d.genres.map(g => g.name);
+            if (d.overview) result.overview = d.overview;
+
         } catch (err) {
             console.error(`获取 TMDb 详情 (ID: ${movieId}) 时出错:`, err);
         }
     }
-    console.log(`为 "${title}" 获取到的 TMDb 详情:`, result);
+    // console.log(`为 "${title}" 获取到的 TMDb 详情:`, result); // Reduced logging noise
     return result;
 }
 
-/**
- * 尝试为收藏中所有缺少详情 (海报/导演/年份/国家) 的电影批量获取信息。
- * 通过设置模态框中的按钮触发。
- */
 async function fetchAllMissingDetails() {
-    if (!getTmdbApiKey()) { alert('请先在设置中输入并保存 TMDb API Key。'); openModal('settingsModal'); return; } // 提示并打开设置
+    if (!getTmdbApiKey()) { alert('请先在设置中输入并保存 TMDb API 密钥。'); openModal('settingsModal'); return; }
     let movies = JSON.parse(localStorage.getItem('movies') || '[]');
-    const moviesToUpdate = movies.filter(m => (!m.coverUrl || m.coverUrl === DEFAULT_POSTER_URL) || !m.director || !m.year || !m.country); // 筛选需要更新的电影
-    if (moviesToUpdate.length === 0) { alert('所有电影详情似乎都完整。'); return; } // 如果没有需要更新的
+    const moviesToUpdate = movies.filter(m =>
+        (!m.coverUrl || m.coverUrl === DEFAULT_POSTER_URL) || !m.director || !m.year || !m.country ||
+        !m.genres || m.genres.length === 0 || !m.overview
+    );
+    if (moviesToUpdate.length === 0) { alert('所有片段数据似乎已完整。'); return; }
 
-    // 获取模态框内的按钮并更新状态
     const fetchButton = document.querySelector('#settingsModal button[onclick="fetchAllMissingDetails()"]');
     const originalButtonContent = fetchButton.innerHTML;
     fetchButton.disabled = true;
     const updateProgressText = (processed, total) => `<svg class="spinner" viewBox="0 0 24 24"><path d="M12 6v2a4 4 0 1 1-4 4H6a6 6 0 1 0 6-6z"/></svg> 获取中 (${processed}/${total})...`;
     fetchButton.innerHTML = updateProgressText(0, moviesToUpdate.length);
 
-    let counts = { movies: 0, poster: 0, director: 0, year: 0, country: 0 }; // 计数器
-    const batchSize = 8, delayBetweenBatches = 1200; // 分批处理参数
+    let counts = { movies: 0, poster: 0, director: 0, year: 0, country: 0, genres: 0, overview: 0 };
+    const batchSize = 5; // Reduced batch size for potentially better rate limit handling
+    const delayBetweenBatches = 1500; // Increased delay
 
-    for (let i = 0; i < moviesToUpdate.length; i += batchSize) { // 循环处理每一批
+    let processedCount = 0;
+
+    for (let i = 0; i < moviesToUpdate.length; i += batchSize) {
         const batch = moviesToUpdate.slice(i, i + batchSize);
-        console.log(`正在处理批次 ${Math.floor(i / batchSize) + 1}...`);
-        fetchButton.innerHTML = updateProgressText(i, moviesToUpdate.length); // 更新按钮文本
+        console.log(`正在处理批次 ${Math.floor(i / batchSize) + 1}/${Math.ceil(moviesToUpdate.length/batchSize)}...`);
 
-        // 并发请求当前批次
         const promises = batch.map(async (movie) => {
             let movieUpdated = false;
             try {
-                // 仅当确实缺少信息时才发起请求
-                if ((!movie.coverUrl || movie.coverUrl === DEFAULT_POSTER_URL) || !movie.director || !movie.year || !movie.country) {
+                // Check again inside map in case data arrived between filter and fetch start
+                const needsUpdate = (!movie.coverUrl || movie.coverUrl === DEFAULT_POSTER_URL) || !movie.director || !movie.year || !movie.country || !movie.genres || movie.genres.length === 0 || !movie.overview;
+                if (needsUpdate) {
                     const details = await fetchMovieDetailsFromTmdb(movie.title);
-                    const movieIndex = movies.findIndex(m => m.id === movie.id); // 在原数组中找到索引
+                    // Find index *after* potentially fetching, as `movies` array is shared reference
+                    const movieIndex = movies.findIndex(m => m.id === movie.id);
                     if (movieIndex !== -1) {
-                        let posterUpd=0, directorUpd=0, yearUpd=0, countryUpd=0;
-                        // 仅更新原本为空的字段
-                        if (details.posterUrl && (!movies[movieIndex].coverUrl || movies[movieIndex].coverUrl === DEFAULT_POSTER_URL)) { movies[movieIndex].coverUrl = details.posterUrl; posterUpd=1; }
-                        if (details.director && !movies[movieIndex].director) { movies[movieIndex].director = details.director; directorUpd=1; }
-                        if (details.year && !movies[movieIndex].year) { movies[movieIndex].year = details.year; yearUpd=1; }
-                        if (details.country && !movies[movieIndex].country) { movies[movieIndex].country = details.country; countryUpd=1; }
-                        // 更新计数
-                        if (posterUpd||directorUpd||yearUpd||cUd) movieUpdated = true;
-                        if (posterUpd) counts.poster++; if (directorUpd) counts.director++; if (yearUpd) counts.year++; if (countryUpd) counts.country++;
+                        let pU=0, dU=0, yU=0, cU=0, gU=0, oU=0; // Update flags
+                        if (details.posterUrl && (!movies[movieIndex].coverUrl || movies[movieIndex].coverUrl === DEFAULT_POSTER_URL)) { movies[movieIndex].coverUrl = details.posterUrl; pU=1; }
+                        if (details.director && !movies[movieIndex].director) { movies[movieIndex].director = details.director; dU=1; }
+                        if (details.year !== null && movies[movieIndex].year === null) { movies[movieIndex].year = details.year; yU=1; } // Allow updating null year
+                        if (details.country && !movies[movieIndex].country) { movies[movieIndex].country = details.country; cU=1; }
+                        if (details.genres && details.genres.length > 0 && (!movies[movieIndex].genres || movies[movieIndex].genres.length === 0)) { movies[movieIndex].genres = details.genres; gU=1; }
+                        if (details.overview && !movies[movieIndex].overview) { movies[movieIndex].overview = details.overview; oU=1; }
+
+                        if (pU||dU||yU||cU||gU||oU) {
+                            movieUpdated = true;
+                            movies[movieIndex].updatedAt = new Date().toISOString(); // Mark as updated
+                        }
+                        // Increment counts based on flags
+                        if (pU) counts.poster++; if (dU) counts.director++; if (yU) counts.year++; if (cU) counts.country++; if (gU) counts.genres++; if (oU) counts.overview++;
                     }
                 }
-            } catch (err) { console.error(`获取 "${movie.title}" 详情时出错:`, err); }
+            } catch (err) { console.error(`处理 "${movie.title}" 详情时出错:`, err); }
             if (movieUpdated) counts.movies++;
+            processedCount++; // Increment processed count regardless of update status
         });
 
-        await Promise.allSettled(promises); // 等待批次完成
-        if (i + batchSize < moviesToUpdate.length) await new Promise(res => setTimeout(res, delayBetweenBatches)); // 批次间延迟
+        await Promise.allSettled(promises); // Wait for batch to complete (or fail)
+        fetchButton.innerHTML = updateProgressText(processedCount, moviesToUpdate.length); // Update progress after each batch
+
+        // Delay before next batch, unless it's the last one
+        if (i + batchSize < moviesToUpdate.length) {
+            await new Promise(res => setTimeout(res, delayBetweenBatches));
+        }
     }
 
-    localStorage.setItem('movies', JSON.stringify(movies)); // 保存更新后的数组
-    renderMovies(); // 重新渲染列表
-    fetchButton.disabled = false; fetchButton.innerHTML = originalButtonContent; // 恢复按钮
-    alert(`批量获取完成！\n共 ${counts.movies} 部电影信息被更新。\n(海报:${counts.poster}, 导演:${counts.director}, 年份:${counts.year}, 国家:${counts.country})`);
-    // 可选：自动关闭设置模态框
-    // closeModal('settingsModal');
+    localStorage.setItem('movies', JSON.stringify(movies));
+    renderMovies(); // Re-render with updated data
+    fetchButton.disabled = false; fetchButton.innerHTML = originalButtonContent;
+    alert(`批量获取完成！\n处理了 ${moviesToUpdate.length} 条可能需要更新的片段。\n共 ${counts.movies} 条片段信息被更新或补充。\n(视觉快照:${counts.poster}, 信息源:${counts.director}, 纪年:${counts.year}, 地区:${counts.country}, 类型:${counts.genres}, 摘要:${counts.overview})`);
 }
 
 
 // --- CSV 处理 ---
-/**
- * 解析 CSV 文本内容为电影对象数组。
- * @param {string} csvText - CSV 文件内容字符串。
- * @returns {Array<object>} - 解析后的电影对象数组。
- * @throws {Error} - 如果 CSV 格式无效或缺少必需列。
- */
 function parseCSV(csvText) {
-    const rows = csvText.split('\n').filter(Boolean); // 按行分割并过滤空行
-    if (rows.length < 2) throw new Error("CSV 文件内容无效，至少需要表头和一行数据。");
+    const rows = csvText.trim().split('\n'); // Trim trailing newline
+    if (rows.length < 2) throw new Error("无效CSV文件：至少需要表头和一行数据。");
 
-    // 解析表头，移除首尾引号和空格
-    const headers = rows[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    // More robust header parsing (handle quotes)
+    const headers = rows[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').trim());
     console.log("解析到的 CSV 表头:", headers);
+    const headerIndex = Object.fromEntries(headers.map((h, i) => [h.toLowerCase(), i])); // Use lowercase keys for matching
 
-    // 不再检查必需的表头
-    console.log("CSV导入：所有字段均为可选");
-
-    // 创建表头到索引的映射
-    const headerIndex = Object.fromEntries(headers.map((h, i) => [h, i]));
-    const getColumnValue = (columns, headerName) => { // 安全获取列值的辅助函数
-        const index = headerIndex[headerName];
-        return index !== undefined && index < columns.length ? columns[index] : '';
+    const getColumnValue = (columns, possibleHeaders) => {
+        for (const header of possibleHeaders) {
+            const index = headerIndex[header.toLowerCase()];
+            if (index !== undefined && index < columns.length && columns[index]) {
+                return columns[index];
+            }
+        }
+        return '';
     };
 
-    // 解析数据行
     return rows.slice(1).map((row, rowIndex) => {
-        // 简单的 CSV 行解析 (可能需要对复杂引号内逗号等情况加强处理)
-        const columns = []; let currentVal = ''; let inQuotes = false;
+        // Improved CSV row parsing to handle quoted fields with commas
+        const columns = [];
+        let currentVal = '';
+        let inQuotes = false;
         for (let i = 0; i < row.length; i++) {
             const char = row[i];
-            if (char === '"' && (i === 0 || row[i - 1] !== '\\')) {
-                if (inQuotes && i + 1 < row.length && row[i + 1] === '"') { currentVal += '"'; i++; }
-                else { inQuotes = !inQuotes; }
-            } else if (char === ',' && !inQuotes) { columns.push(currentVal.trim()); currentVal = ''; }
-            else { currentVal += char; }
+            if (char === '"') {
+                 // Handle escaped quotes ("") inside quoted field
+                 if (inQuotes && i + 1 < row.length && row[i + 1] === '"') {
+                     currentVal += '"';
+                     i++; // Skip the second quote
+                 } else {
+                     inQuotes = !inQuotes;
+                 }
+            } else if (char === ',' && !inQuotes) {
+                columns.push(currentVal.trim());
+                currentVal = '';
+            } else {
+                currentVal += char;
+            }
         }
-        columns.push(currentVal.trim());
-        const cleanedColumns = columns.map(col => col.replace(/^"(.*)"$/, '$1').trim()); // 移除字段首尾引号
+        columns.push(currentVal.trim()); // Add the last value
 
-        // 构建电影对象
+        // Clean values (remove surrounding quotes only if they exist)
+        const cleanedColumns = columns.map(col => {
+             if (col.startsWith('"') && col.endsWith('"')) {
+                 return col.slice(1, -1).replace(/""/g, '"').trim();
+             }
+             return col.trim();
+         });
+
         const movie = {
-            title: getColumnValue(cleanedColumns, '电影/电视剧/番组'),
-            ratingDate: getColumnValue(cleanedColumns, '观影日期'),
-            rating: parseFloat(getColumnValue(cleanedColumns, '个人评分')) || null,
-            review: getColumnValue(cleanedColumns, '我的短评'),
-            year: parseInt((getColumnValue(cleanedColumns, '上映年份') || '').match(/^\d{4}/)?.[0]) || null,
-            country: getColumnValue(cleanedColumns, '制片国家'),
-            link: getColumnValue(cleanedColumns, '条目链接'),
-            director: getColumnValue(cleanedColumns, '导演'),
-            coverUrl: getColumnValue(cleanedColumns, '海报URL')
+            id: Date.now() + Math.random(), // Generate ID immediately
+            title: getColumnValue(cleanedColumns, ['片段标识符', '电影/电视剧/番组', 'title', 'name']),
+            ratingDate: getColumnValue(cleanedColumns, ['访问日期', '观影日期', '打分日期', 'date', 'rated_date']),
+            rating: parseFloat(getColumnValue(cleanedColumns, ['神经评分', '个人评分', 'rating', 'score'])) || null,
+            review: getColumnValue(cleanedColumns, ['个人日志', '我的短评', 'review', 'comment']),
+            year: parseInt((getColumnValue(cleanedColumns, ['发行纪年', '上映日期', 'year', 'release_date']) || '').match(/^\d{4}/)?.[0]) || null,
+            country: getColumnValue(cleanedColumns, ['来源地区', '制片国家', 'country', 'region']),
+            link: getColumnValue(cleanedColumns, ['数据接口', '条目链接', 'url', 'link']),
+            director: getColumnValue(cleanedColumns, ['信息源', '导演', 'director']),
+            coverUrl: getColumnValue(cleanedColumns, ['视觉快照URL', '海报URL', 'poster', 'cover_url']),
+            genres: [], // Genres will be fetched, not imported from CSV
+            overview: '', // Overview will be fetched
+            createdAt: new Date().toISOString()
         };
 
-        // 行数据校验 - 不再要求必填字段
+        // Validate date (if provided)
         if (movie.ratingDate && isNaN(new Date(movie.ratingDate).getTime())) {
-            console.warn(`跳过 CSV 行 ${rowIndex + 2}: 观影日期格式无效。`);
+            console.warn(`跳过 CSV 行 ${rowIndex + 2}: 无效日期格式 (${movie.ratingDate})。请使用 YYYY-MM-DD。`);
             return null;
         }
-        return { id: Date.now() + Math.random(), ...movie, createdAt: new Date().toISOString() };
-    }).filter(Boolean); // 过滤掉校验失败的行
+        // Ensure title exists
+        if (!movie.title) {
+            console.warn(`跳过 CSV 行 ${rowIndex + 2}: 缺少有效的片段标识符 (标题)。`);
+            return null;
+        }
+
+        // Convert empty string date to null
+        if (movie.ratingDate === '') movie.ratingDate = null;
+
+        return movie;
+    }).filter(Boolean); // Filter out null entries from skipped rows
 }
 
-/**
- * 处理 CSV 文件导入操作。
- */
 async function importCSV() {
-    const fileInput = document.getElementById('modalFileInput'); // 获取模态框内的文件输入
-    const fileNameSpan = document.getElementById('modalFileName'); // 获取模态框内的文件名显示元素
-    if (!fileInput.files.length) { alert('请在弹窗中选择一个 CSV 文件。'); return; }
-
-    // 获取模态框内的导入按钮并设置加载状态
+    const fileInput = document.getElementById('modalFileInput');
+    const fileNameSpan = document.getElementById('modalFileName');
+    if (!fileInput.files.length) { alert('请选择一个 CSV 文件。'); return; }
     const importButton = document.querySelector('#importCsvModal button[onclick="importCSV()"]');
     const originalButtonContent = importButton.innerHTML;
-    importButton.disabled = true;
-    importButton.innerHTML = `<svg class="spinner" viewBox="0 0 24 24"><path d="M12 6v...z"/></svg> 导入中...`;
+    importButton.disabled = true; importButton.innerHTML = `<svg class="spinner" viewBox="0 0 24 24"><path d="M12 6v...z"/></svg> 注入中...`; // Ensure spinner SVG is complete or remove
 
     const reader = new FileReader();
     reader.onload = async (e) => {
-        let newMoviesCount = 0, skippedCount = 0, updatedDetailsCount = 0;
+        let newCount = 0, skipped = 0, updated = 0;
         try {
-            const importedMovies = parseCSV(e.target.result); // 解析文件内容
+            const importedMovies = parseCSV(e.target.result);
             let existingMovies = JSON.parse(localStorage.getItem('movies') || '[]');
-            const moviesToAdd = []; // 存储待添加（去重后）
+            const existingTitlesAndYears = new Set(existingMovies.map(ex => `${ex.title.toLowerCase()}::${ex.year || 'null'}`)); // Optimize duplicate check
 
-            // 去重处理
-            importedMovies.forEach(newMovie => {
-                const isDuplicate = existingMovies.some(existing =>
-                    existing.title === newMovie.title &&
-                    (existing.year === newMovie.year || (!existing.year && !newMovie.year))
-                );
-                if (!isDuplicate) moviesToAdd.push(newMovie);
-                else skippedCount++;
+            const toAdd = [];
+            importedMovies.forEach(imp => {
+                const uniqueKey = `${imp.title.toLowerCase()}::${imp.year || 'null'}`;
+                // Check for duplicates based on title AND year (if year exists)
+                const isDup = existingTitlesAndYears.has(uniqueKey);
+                if (!isDup) {
+                    toAdd.push(imp);
+                    existingTitlesAndYears.add(uniqueKey); // Add to set to prevent importing duplicates from the same file
+                } else {
+                    skipped++;
+                }
             });
-            newMoviesCount = moviesToAdd.length;
 
-            if (newMoviesCount > 0) {
-                const apiKeyExists = !!getTmdbApiKey();
-                alert(`找到 ${newMoviesCount} 部新电影${apiKeyExists ? '，将尝试获取缺失详情...' : '。未设置 API Key，不获取详情。'}`);
+            newCount = toAdd.length;
+            if (newCount > 0) {
+                const apiKey = getTmdbApiKey();
+                console.log(`发现 ${newCount} 条新片段。${apiKey ? '尝试补全数据...' : '未配置密钥，跳过补全。'}`);
+                // Process additions without blocking UI for too long if fetching details
+                 if (apiKey) {
+                     importButton.innerHTML = `<svg class="spinner" viewBox="0 0 24 24"><path d="M12 6v...z"/></svg> 补全数据(${updated}/${newCount})...`;
+                     const batchSize = 5;
+                     const delayBetweenBatches = 1500;
+                     for (let i = 0; i < toAdd.length; i += batchSize) {
+                         const batch = toAdd.slice(i, i + batchSize);
+                         const promises = batch.map(async m => {
+                            let upd = false;
+                            // Only fetch if core details are missing
+                            if (!m.coverUrl || !m.director || !m.year || !m.country || !m.genres.length || !m.overview) {
+                                const d = await fetchMovieDetailsFromTmdb(m.title);
+                                if (!m.coverUrl && d.posterUrl) { m.coverUrl = d.posterUrl; upd = true; }
+                                if (!m.director && d.director) { m.director = d.director; upd = true; }
+                                if (m.year === null && d.year !== null) { m.year = d.year; upd = true; } // Update null year
+                                if (!m.country && d.country) { m.country = d.country; upd = true; }
+                                if (!m.genres?.length && d.genres?.length) { m.genres = d.genres; upd = true; }
+                                if (!m.overview && d.overview) { m.overview = d.overview; upd = true; }
+                            }
+                            if (upd) updated++;
+                            importButton.innerHTML = `<svg class="spinner" viewBox="0 0 24 24"><path d="M12 6v...z"/></svg> 补全数据(${updated}/${newCount})...`;
+                            return m;
+                         });
+                         await Promise.allSettled(promises);
+                         if (i + batchSize < toAdd.length) await new Promise(res => setTimeout(res, delayBetweenBatches));
+                     }
+                 }
 
-                // 为新电影获取详情
-                const fetchPromises = moviesToAdd.map(async (movie) => {
-                    let detailsUpdated = false;
-                    if (apiKeyExists && (!movie.coverUrl || !movie.director || !movie.year || !movie.country)) {
-                        const details = await fetchMovieDetailsFromTmdb(movie.title);
-                        if (!movie.coverUrl && details.posterUrl) { movie.coverUrl = details.posterUrl; detailsUpdated = true; }
-                        if (!movie.director && details.director) { movie.director = details.director; detailsUpdated = true; }
-                        if (!movie.year && details.year) { movie.year = details.year; detailsUpdated = true; }
-                        if (!movie.country && details.country) { movie.country = details.country; detailsUpdated = true; }
-                    }
-                    if (detailsUpdated) updatedDetailsCount++;
-                    return movie;
-                });
-                const finalMoviesToAdd = await Promise.all(fetchPromises); // 等待所有获取完成
-
-                // 保存到 localStorage
-                localStorage.setItem('movies', JSON.stringify([...existingMovies, ...finalMoviesToAdd]));
-                currentPage = 1;
-                renderMovies(); // 重新渲染
-                closeModal('importCsvModal'); // 成功后关闭导入模态框
-                alert(`导入完成！\n成功导入 ${newMoviesCount} 部。\n${apiKeyExists ? `其中 ${updatedDetailsCount} 部成功获取/更新了详情。\n` : ''}${skippedCount > 0 ? `跳过 ${skippedCount} 部可能重复的电影。` : ''}`);
+                // Add processed movies to existing ones
+                const finalMovies = [...existingMovies, ...toAdd];
+                localStorage.setItem('movies', JSON.stringify(finalMovies));
+                currentPage = 1; // Reset to first page
+                renderMovies();
+                closeModal('importCsvModal');
+                alert(`注入完成！\n成功植入 ${newCount} 条片段。\n${apiKey ? `其中 ${updated} 条数据已补全。\n` : ''}${skipped > 0 ? `跳过 ${skipped} 条可能重复的片段 (基于标题和年份)。` : ''}`);
             } else {
-                alert(`导入完成。未找到新的电影数据可添加。共处理 ${importedMovies.length} 行。`);
-                closeModal('importCsvModal'); // 无新电影也关闭模态框
+                alert(`注入完成。未发现新片段可植入 (检查了 ${importedMovies.length} 行)。${skipped > 0 ? ` 跳过 ${skipped} 条可能重复的片段 (基于标题和年份)。` : ''}`);
+                closeModal('importCsvModal');
             }
         } catch (err) {
             console.error("导入 CSV 时出错:", err);
-            alert('CSV 处理失败：' + err.message); // 显示错误给用户
-        } finally {
-            // 恢复 UI 状态
-            fileInput.value = ''; // 清空文件选择
+            alert('CSV 处理失败：' + err.message);
+        }
+        finally {
+            fileInput.value = ''; // Clear file input
             fileNameSpan.textContent = '未选择文件';
             importButton.disabled = false;
             importButton.innerHTML = originalButtonContent;
         }
     };
     reader.onerror = (err) => {
-        console.error("文件读取错误:", err); alert('读取文件失败，请重试。');
-        // 恢复 UI 状态
-        importButton.disabled = false; importButton.innerHTML = originalButtonContent;
+        console.error("文件读取错误:", err);
+        alert('读取文件失败。');
+        importButton.disabled = false;
+        importButton.innerHTML = originalButtonContent;
     };
-    reader.readAsText(fileInput.files[0], 'UTF-8'); // 指定 UTF-8 编码读取
+    reader.readAsText(fileInput.files[0], 'UTF-8'); // Specify UTF-8 encoding
 }
 
-/**
- * 转义用于 CSV 单元格的字符串值。
- */
+// Escape CSV value function
 function escapeCSVValue(v) {
-    if (v == null) return ''; let s = String(v);
-    if (/[",\n]/.test(s)) { s = s.replace(/"/g, '""'); s = `"${s}"`; } return s;
+    if (v == null) return ''; // Handle null or undefined
+    let s = String(v);
+    // If the string contains a comma, newline, or double quote, enclose it in double quotes
+    if (/[",\n]/.test(s)) {
+        // Escape existing double quotes by doubling them
+        s = s.replace(/"/g, '""');
+        // Enclose the entire string in double quotes
+        s = `"${s}"`;
+    }
+    return s;
 }
 
-/**
- * 将所有电影数据导出为 CSV 文件。
- */
 function exportCSV() {
-    const movies = JSON.parse(localStorage.getItem('movies') || '[]');
-    if (movies.length === 0) { alert('没有电影可以导出。'); return; }
+    let movies = JSON.parse(localStorage.getItem('movies') || '[]');
+    if (movies.length === 0) { alert('无数据可导出。'); return; }
 
-    // 按观影日期排序
-    movies.sort((a, b) => { const dA=a.ratingDate?new Date(a.ratingDate):0;const dB=b.ratingDate?new Date(b.ratingDate):0;if(isNaN(dA)&&!isNaN(dB))return 1;if(!isNaN(dA)&&isNaN(dB))return-1;if(isNaN(dA)&&isNaN(dB))return 0;return dB-dA; });
+    // Use the currently applied sort order for export
+    const sortedMovies = sortMovies([...movies], currentSortOrder); // Sort a copy
 
-    // 定义导出的表头 (使用中文)
-    const headers = ['电影/电视剧/番组', '个人评分', '观影日期', '我的短评', '上映年份', '制片国家', '条目链接', '导演', '海报URL', '内部ID', '添加日期', '最后修改日期'];
+    const headers = ['片段标识符', '神经评分', '访问日期', '个人日志', '发行纪年', '来源地区', '数据接口', '信息源', '类型协议', '核心摘要', '视觉快照URL', '内部ID', '植入日期', '最后修改日期'];
+    const rows = sortedMovies.map(m => [
+        m.title,
+        m.rating,
+        m.ratingDate, // Already YYYY-MM-DD or null
+        m.review,
+        m.year,
+        m.country,
+        m.link,
+        m.director,
+        (m.genres || []).join('; '), // Join genres with semicolon
+        m.overview,
+        m.coverUrl,
+        m.id, // Use the internal ID
+        m.createdAt ? new Date(m.createdAt).toISOString() : '', // Format dates as ISO strings
+        m.updatedAt ? new Date(m.updatedAt).toISOString() : ''
+    ].map(escapeCSVValue).join(',')); // Escape each value and join with comma
 
-    // 准备数据行
-    const rows = movies.map(m => [
-        m.title, m.rating, m.ratingDate, m.review, m.year, m.country, m.link, m.director, m.coverUrl, m.id, m.createdAt, m.updatedAt
-    ].map(escapeCSVValue).join(',')); // 转义并用逗号连接
-
-    // 组合 CSV 字符串
     const csvString = [headers.join(','), ...rows].join('\n');
-    // 创建 Blob 并下载
-    const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' }); // 加 UTF-8 BOM
+    const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' }); // Add BOM for Excel compatibility
+
+    // Create download link
     const link = document.createElement('a');
-    if (link.download === undefined) { alert('您的浏览器不支持自动下载。'); return; }
+    if (link.download === undefined) {
+        alert('浏览器不支持自动下载。');
+        return;
+    }
     const url = URL.createObjectURL(blob);
-    const timestamp = new Date().toISOString().slice(0, 10);
+    const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     link.setAttribute('href', url);
-    link.setAttribute('download', `电影收藏_${timestamp}.csv`);
-    link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    URL.revokeObjectURL(url); // 释放资源
+    link.setAttribute('download', `意识档案库_${timestamp}_排序_${currentSortOrder}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url); // Clean up
 }
 
 
 // --- 电影增删改查与渲染 ---
-/**
- * 添加新电影（从模态框获取输入）。
- */
+
 async function addMovie(e) {
-    e.preventDefault();
-    const addButton = document.querySelector('#addMovieBtnInModal'); // 定位模态框内的添加按钮
+    e.preventDefault(); // Prevent default form submission
+    const addButton = document.querySelector('#addMovieBtnInModal');
     const originalButtonContent = addButton.innerHTML;
+    const titleInput = document.getElementById('modalTitle');
+    const ratingInput = document.getElementById('modalRating');
+    const ratingDateInput = document.getElementById('modalRatingDate');
+    const reviewInput = document.getElementById('modalReview');
 
-    // 从模态框内的元素获取值
-    const title = document.getElementById('modalTitle').value.trim();
-    const rating = parseFloat(document.getElementById('modalRating').value) || null;
-    const ratingDate = document.getElementById('modalRatingDate').value;
-    const review = document.getElementById('modalReview').value.trim();
+    const title = titleInput.value.trim();
+    const rating = parseFloat(ratingInput.value) || null; // Use null if not a valid number
+    const ratingDate = ratingDateInput.value || null; // Use null if empty
+    const review = reviewInput.value.trim();
 
-    // 校验必需字段
-    if (!title) { alert('电影名称不能为空！'); return; }
-    if (!ratingDate) { alert('观影日期不能为空！'); return; }
-    if (isNaN(new Date(ratingDate).getTime())) { alert('观影日期格式无效！'); return; }
+    if (!title) { alert('片段标识符不能为空！'); return; }
+    if (ratingDate && isNaN(new Date(ratingDate).getTime())) { alert('访问日期格式无效！请使用 YYYY-MM-DD 或留空。'); return; }
+    if (rating !== null && (rating < 0 || rating > 10)) { alert('神经评分必须在 0 到 10 之间！'); return; } // Validate rating range
 
-    // 设置按钮加载状态
     addButton.disabled = true;
     addButton.innerHTML = `<svg class="spinner" viewBox="0 0 24 24"><path d="M12 6v2a4 4 0 1 1-4 4H6a6 6 0 1 0 6-6z"/></svg> 处理中...`;
 
-    let fetchedDetails = { posterUrl: null, director: null, year: null, country: null };
+    let details = { posterUrl: null, director: null, year: null, country: null, genres: [], overview: null };
     try {
-        // 尝试获取详情
         if (getTmdbApiKey()) {
-            addButton.innerHTML = `<svg class="spinner" viewBox="0 0 24 24"><path d="M12 6v2a4 4 0 1 1-4 4H6a6 6 0 1 0 6-6z"/></svg> 获取详情...`;
-            fetchedDetails = await fetchMovieDetailsFromTmdb(title);
+            addButton.innerHTML = `<svg class="spinner" viewBox="0 0 24 24"><path d="M12 6v2a4 4 0 1 1-4 4H6a6 6 0 1 0 6-6z"/></svg> 获取数据...`;
+            details = await fetchMovieDetailsFromTmdb(title);
         }
 
-        // 构建电影对象
         const movie = {
-            id: Date.now() + Math.random(), // 加一点随机性避免快速添加时 ID 重复
-            title, rating, ratingDate, review,
-            director: fetchedDetails.director || '',
-            year: fetchedDetails.year || null,
-            country: fetchedDetails.country || '',
-            coverUrl: fetchedDetails.posterUrl || '',
-            link: '', // 链接初始为空
+            id: Date.now() + Math.random(), // Use timestamp + random for better uniqueness
+            title,
+            rating,
+            ratingDate,
+            review,
+            director: details.director || '', // Default to empty string if null
+            year: details.year || null, // Keep null if not found
+            country: details.country || '',
+            coverUrl: details.posterUrl || '', // Default to empty string, will use placeholder in render
+            link: '', // Default empty link
+            genres: details.genres || [],
+            overview: details.overview || '',
             createdAt: new Date().toISOString()
         };
 
-        // 保存并更新 UI
         const movies = JSON.parse(localStorage.getItem('movies') || '[]');
         movies.push(movie);
         localStorage.setItem('movies', JSON.stringify(movies));
-        currentPage = 1; renderMovies(); // 渲染第一页
-        document.getElementById('addMovieFormModal').reset(); // 重置模态框表单
-        closeModal('addMovieModal'); // 关闭添加模态框
-        alert('添加成功！');
+
+        currentPage = 1; // Go to first page to show the new movie
+        renderMovies();
+        document.getElementById('addMovieFormModal').reset(); // Reset the form
+        closeModal('addMovieModal');
+
     } catch (err) {
-         console.error("添加电影时出错:", err);
-         alert("添加电影时发生错误。");
+        console.error("添加电影时出错:", err);
+        alert("添加片段时发生错误，请检查控制台获取更多信息。");
     } finally {
-        // 恢复按钮状态
         addButton.disabled = false;
         addButton.innerHTML = originalButtonContent;
     }
 }
 
-/**
- * 渲染电影列表及分页。
- */
-function renderMovies() {
-    let movies = JSON.parse(localStorage.getItem('movies') || '[]');
-    const container = document.getElementById('movieList'); container.innerHTML = '';
-    document.getElementById('movieCount').textContent = movies.length;
+function filterMovies(movies, term) {
+    const lowerTerm = term.toLowerCase().trim();
+    if (!lowerTerm) return movies;
 
-    // 1. 排序
-    movies.sort((a, b) => { const dA=a.ratingDate?new Date(a.ratingDate):0;const dB=b.ratingDate?new Date(b.ratingDate):0;if(isNaN(dA)&&!isNaN(dB))return 1;if(!isNaN(dA)&&isNaN(dB))return-1;if(isNaN(dA)&&isNaN(dB))return 0;return dB-dA;});
+    // Optimized filtering: check properties only if they exist
+    return movies.filter(m =>
+        (m.title && m.title.toLowerCase().includes(lowerTerm)) ||
+        (m.director && m.director.toLowerCase().includes(lowerTerm)) ||
+        (m.review && m.review.toLowerCase().includes(lowerTerm)) ||
+        (m.year && String(m.year).includes(lowerTerm)) || // Year check is fine
+        (m.genres && m.genres.some(g => g.toLowerCase().includes(lowerTerm))) ||
+        (m.country && m.country.toLowerCase().includes(lowerTerm)) // Added country search
+    );
+}
 
-    // 2. 分页逻辑
-    const totalMovies = movies.length; const totalPages = Math.ceil(totalMovies / moviesPerPage);
-    if (currentPage > totalPages && totalPages > 0) currentPage = totalPages; else if (currentPage < 1) currentPage = 1;
-    document.getElementById('currentPage').textContent = currentPage; document.getElementById('totalPages').textContent = totalPages > 0 ? totalPages : 1;
-    document.getElementById('prevPage').disabled = currentPage === 1; document.getElementById('nextPage').disabled = currentPage === totalPages || totalMovies === 0;
-    document.getElementById('jumpPage').max = totalPages > 0 ? totalPages : 1;
-    document.getElementById('pagination').style.display = totalMovies > 0 ? 'flex' : 'none';
+function filterMoviesByGenre(movies, genre) {
+    if (!genre) return movies;
+    return movies.filter(m => m.genres && Array.isArray(m.genres) && m.genres.includes(genre));
+}
 
-    // 3. 空列表处理
-    if (totalMovies === 0) { container.innerHTML = '<p class="empty-message">这里空空如也，快添加你的第一部电影吧！</p>'; document.getElementById('selectAll').checked=false; checkSelectedMovies(); return; }
+function sortMovies(movies, sortOrder) {
+    // Helper functions for robust sorting (handle null/undefined/NaN)
+    const getDate = (d) => {
+        if (!d) return 0; // Treat null/empty dates as oldest
+        const dt = new Date(d);
+        return isNaN(dt.getTime()) ? 0 : dt.getTime();
+    };
+    const getNum = (n, desc = true) => {
+        // Treat null/undefined ratings/years as lowest (-Infinity)
+        // If ascending, nulls should come first. If descending, nulls should come last.
+        const val = typeof n === 'number' && !isNaN(n) ? n : (desc ? -Infinity : Infinity);
+        return val;
+    };
+    const getStr = (s) => (s || '').toLowerCase(); // Treat null/empty strings as empty
 
-    // 4. 渲染卡片
-    const startIndex = (currentPage - 1) * moviesPerPage; const endIndex = Math.min(startIndex + moviesPerPage, totalMovies);
-    const currentPageMovies = movies.slice(startIndex, endIndex);
-    currentPageMovies.forEach((m, index) => {
-        const el = document.createElement('div'); el.className = 'movie-item'; el.style.animationDelay = `${0.05 + index * 0.03}s`;
-        const rating = typeof m.rating === 'number' ? m.rating.toFixed(1) : null;
-        const added = m.createdAt ? new Date(m.createdAt).toLocaleDateString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit'}) : '?';
-        const cover = m.coverUrl || DEFAULT_POSTER_URL;
-        const createMetaItem = (iconPath, title, value) => value ? `<div class="meta-item" title="${title}: ${value}"><svg viewBox="0 0 24 24"><path d="${iconPath}"/></svg><span>${value}</span></div>` : '';
-        const metaHTML = `${rating ? `<div class="movie-rating-display" title="个人评分 ${rating}"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg><span>${rating}</span></div>` : '<div class="movie-rating-display placeholder">未评分</div>'} ${createMetaItem("M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z", "上映年份", m.year)} ${createMetaItem("M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z", "导演", m.director)} ${createMetaItem("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z", "国家/地区", m.country)} ${createMetaItem("M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z", "观影日期", m.ratingDate)}`;
-        const linkBtn = m.link ? `<a href="${m.link}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-small" title="查看链接"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg> 链接</a>` : '';
-        const editBtn = `<button class="btn btn-outline btn-small" onclick="editMovie('${m.id}')" title="编辑"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg> 编辑</button>`;
-        const deleteBtn = `<button class="btn btn-outline btn-small" onclick="deleteMovie('${m.id}')" title="删除"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> 删除</button>`;
-        el.innerHTML = `<div class="checkbox-container"><input type="checkbox" class="movie-checkbox" data-id="${m.id}" title="选择"></div><div class="movie-item-poster"><img src="${cover}" alt="${m.title} 海报" loading="lazy" onerror="this.onerror=null; this.src='${DEFAULT_POSTER_URL}';"></div><div class="movie-item-content"><h3 class="movie-title" title="${m.title}">${m.title}</h3><div class="movie-details-grid">${metaHTML}</div>${m.review ? `<p class="movie-review" title="短评">${m.review}</p>` : ''}<div class="movie-actions"><small class="movie-date" title="添加日期">添加:${added}</small><div class="action-buttons"> ${linkBtn} ${editBtn} ${deleteBtn} </div></div></div>`;
-        container.appendChild(el);
+    // Use slice() to avoid modifying the original array if it's passed directly
+    movies.sort((a, b) => {
+        switch (sortOrder) {
+            case 'ratingDate_desc': return getDate(b.ratingDate) - getDate(a.ratingDate);
+            case 'ratingDate_asc': return getDate(a.ratingDate) - getDate(b.ratingDate);
+            case 'rating_desc': return getNum(b.rating, true) - getNum(a.rating, true);
+            case 'rating_asc': return getNum(a.rating, false) - getNum(b.rating, false);
+            case 'title_asc': return getStr(a.title).localeCompare(getStr(b.title), 'zh-CN');
+            case 'title_desc': return getStr(b.title).localeCompare(getStr(a.title), 'zh-CN');
+            case 'year_desc': return getNum(b.year, true) - getNum(a.year, true);
+            case 'year_asc': return getNum(a.year, false) - getNum(b.year, false);
+             // Sort by creation timestamp (ISO string comparison works)
+            case 'added_desc': return (b.createdAt || '0').localeCompare(a.createdAt || '0');
+            case 'added_asc': return (a.createdAt || '0').localeCompare(b.createdAt || '0');
+            default: return 0;
+        }
     });
-    checkSelectedMovies(); // 更新全选和删除菜单项状态
+    return movies;
 }
 
-/**
- * 删除指定 ID 的电影。
- */
-function deleteMovie(id) {
-    if (!confirm('确定要删除这部电影吗？')) return;
-    let movies = JSON.parse(localStorage.getItem('movies') || '[]');
-    const len = movies.length; movies = movies.filter(m => String(m.id) !== String(id));
-    if (movies.length < len) {
-        localStorage.setItem('movies', JSON.stringify(movies));
-        const pages = Math.ceil(movies.length / moviesPerPage); if (currentPage > pages) currentPage = pages > 0 ? pages : 1;
-        renderMovies(); alert('已删除。');
-    } else { alert('未找到要删除的电影。'); }
+function populateGenreFilter() {
+    // Get genres from the currently available movies in localStorage
+    const movies = JSON.parse(localStorage.getItem('movies') || '[]');
+    const genres = new Set();
+    movies.forEach(m => {
+        if (m.genres && Array.isArray(m.genres)) {
+            m.genres.forEach(g => genres.add(g.trim())); // Trim whitespace from genres
+        }
+    });
+
+    const select = document.getElementById('genreFilter');
+    const prevVal = select.value; // Remember the previously selected value
+    select.innerHTML = '<option value="">所有类型协议</option>'; // Reset options
+
+    // Sort genres locale-aware (Chinese friendly)
+    const sortedGenres = Array.from(genres).filter(Boolean).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+
+    sortedGenres.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = g;
+        select.appendChild(opt);
+    });
+
+    // Restore previous selection if it still exists
+    select.value = sortedGenres.includes(prevVal) ? prevVal : "";
+    // Update global state (important if called outside renderMovies)
+    currentGenreFilter = select.value;
 }
 
-/**
- * 删除所有选中的电影（或全部电影，如果“全选”被勾选）。
- */
-function deleteSelectedMovies() {
-    const allChecked = document.getElementById('selectAll').checked;
-    const selectedBoxes = document.querySelectorAll('.movie-checkbox:checked');
-    let movies = JSON.parse(localStorage.getItem('movies') || '[]');
-    const totalCount = movies.length;
 
-    if (allChecked && totalCount > 0) {
-        if (!confirm(`确定要删除全部 ${totalCount} 部电影吗？此操作不可撤销！`)) return;
-        localStorage.setItem('movies', '[]'); currentPage = 1; alert(`已删除全部 ${totalCount} 部电影。`);
-    } else if (selectedBoxes.length > 0) {
-        const idsToDelete = Array.from(selectedBoxes).map(cb => String(cb.dataset.id));
-        const countToDelete = idsToDelete.length;
-        if (!confirm(`确定要删除选中的 ${countToDelete} 部电影吗？`)) return;
-        movies = movies.filter(m => !idsToDelete.includes(String(m.id)));
-        localStorage.setItem('movies', JSON.stringify(movies));
-        const pages = Math.ceil(movies.length / moviesPerPage); if (currentPage > pages) currentPage = pages > 0 ? pages : 1;
-        alert(`已删除 ${countToDelete} 部电影。`);
+function renderMovies() {
+    // 1. Get and parse data ONCE
+    const allMovies = JSON.parse(localStorage.getItem('movies') || '[]');
+    const container = document.getElementById('movieList');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const movieCountSpan = document.getElementById('movieCount');
+    const currentPageSpan = document.getElementById('currentPage');
+    const totalPagesSpan = document.getElementById('totalPages');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const jumpPageInput = document.getElementById('jumpPage');
+    const paginationDiv = document.getElementById('pagination');
+
+    // Ensure filters/sort state are up-to-date (e.g., if called after an action)
+    currentSearchTerm = document.getElementById('searchInput')?.value || '';
+    currentSortOrder = document.getElementById('sortSelect')?.value || 'ratingDate_desc';
+    currentGenreFilter = document.getElementById('genreFilter')?.value || '';
+
+    // Update genre filter options before filtering
+    populateGenreFilter();
+
+    // 2. Filter and Sort Data
+    const genreFiltered = filterMoviesByGenre(allMovies, currentGenreFilter);
+    const searchFiltered = filterMovies(genreFiltered, currentSearchTerm);
+    const sorted = sortMovies(searchFiltered, currentSortOrder); // sortMovies sorts in place
+
+    // 3. Calculate Pagination
+    const totalVisible = sorted.length;
+    movieCountSpan.textContent = totalVisible;
+    const totalPages = Math.ceil(totalVisible / moviesPerPage) || 1; // Ensure totalPages is at least 1
+
+    // Adjust currentPage if it's out of bounds
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    currentPageSpan.textContent = currentPage;
+    totalPagesSpan.textContent = totalPages;
+    jumpPageInput.max = totalPages;
+    jumpPageInput.value = ''; // Clear jump input
+
+    // Enable/disable pagination buttons
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage === totalPages;
+    paginationDiv.style.display = totalVisible > 0 ? 'flex' : 'none'; // Hide pagination if no results
+
+    // 4. Prepare items for the current page
+    const start = (currentPage - 1) * moviesPerPage;
+    const end = Math.min(start + moviesPerPage, totalVisible);
+    const pageMovies = sorted.slice(start, end);
+
+    // 5. Render using DocumentFragment for performance
+    const fragment = document.createDocumentFragment();
+    if (totalVisible === 0) {
+        const emptyMsg = document.createElement('p');
+        emptyMsg.className = 'empty-message';
+        emptyMsg.textContent = (currentGenreFilter || currentSearchTerm)
+            ? `未找到匹配当前筛选条件的片段。`
+            : '档案库为空，请植入新的意识片段。';
+        fragment.appendChild(emptyMsg);
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
     } else {
-        alert('请先选择要删除的电影，或勾选“全选”。'); return;
+        pageMovies.forEach((m, i) => {
+            const el = document.createElement('div');
+            el.className = 'movie-item';
+            // Stagger animation slightly - useful for visual feedback on changes
+            el.style.animationDelay = `${0.05 + (i % moviesPerPage) * 0.03}s`;
+            el.dataset.movieId = m.id; // Use dataset for ID
+
+            const rating = typeof m.rating === 'number' ? m.rating.toFixed(1) : null;
+            const cover = m.coverUrl || DEFAULT_POSTER_URL; // Use default if no cover
+            const date = m.ratingDate ? new Date(m.ratingDate).toLocaleDateString('sv-SE') : null; // YYYY-MM-DD
+
+            // Use template literal for cleaner HTML structure
+            el.innerHTML = `
+                <div class="checkbox-container">
+                    <input type="checkbox" class="movie-checkbox" data-id="${m.id}" title="选择此片段">
+                </div>
+                <div class="movie-item-poster">
+                    <img src="${cover}" alt="${m.title || '片段'} 视觉快照" loading="lazy" onerror="this.onerror=null; this.src='${DEFAULT_POSTER_URL}';">
+                </div>
+                <div class="movie-item-content">
+                    <h3 class="movie-title" title="${m.title || ''}">${m.title || '未命名片段'}</h3>
+                    <div class="movie-card-meta">
+                        ${rating !== null
+                            ? `<span class="movie-card-rating" title="神经评分 ${rating}">
+                                 <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                                 <span>${rating}</span>
+                               </span>`
+                            : '<span class="movie-card-rating placeholder">未评分</span>'
+                        }
+                        ${date ? `<span class="movie-card-date" title="访问日期">${date}</span>` : ''}
+                    </div>
+                </div>`;
+            fragment.appendChild(el);
+        });
     }
-    document.getElementById('selectAll').checked = false; renderMovies();
+
+    // 6. Update DOM efficiently
+    container.innerHTML = ''; // Clear previous content
+    container.appendChild(fragment); // Append the fragment
+
+    // 7. Update selection state after rendering
+    checkSelectedMovies();
 }
 
-/**
- * 打开编辑模态框并填充数据。
- */
+
+function showMovieDetails(movieId) {
+    const movies = JSON.parse(localStorage.getItem('movies') || '[]');
+    // Find movie by ID (ensure type consistency, although dataset.movieId should be string)
+    const movie = movies.find(m => String(m.id) === String(movieId));
+
+    if (!movie) {
+        console.error("未找到 ID 为 " + movieId + " 的片段");
+        alert("无法加载片段详情，请刷新页面重试。");
+        return;
+    }
+
+    // --- Populate Modal Elements ---
+    document.getElementById('detailTitle').textContent = movie.title || '未命名片段';
+    document.getElementById('detailFullTitle').textContent = movie.title || '未命名片段'; // Set full title in info area
+    const detailPoster = document.getElementById('detailPoster');
+    detailPoster.src = movie.coverUrl || DEFAULT_POSTER_URL;
+    detailPoster.alt = `${movie.title || ''} 视觉快照`;
+    detailPoster.onerror = () => { // Add onerror handler for detail poster too
+         detailPoster.onerror = null; // Prevent infinite loop
+         detailPoster.src = DEFAULT_POSTER_URL;
+    };
+
+
+    const metaContainer = document.getElementById('detailMeta');
+    metaContainer.innerHTML = '<label>核心参数:</label>'; // Reset content but keep label
+
+    // Helper to create meta items (more readable)
+    const createMetaItem = (iconPath, title, value) => {
+        if (!value) return ''; // Don't create item if value is missing
+        return `
+            <div class="meta-item" title="${title}: ${value}">
+                <svg viewBox="0 0 24 24"><path d="${iconPath}"/></svg>
+                <span>${value}</span>
+            </div>`;
+    };
+
+    // Icons paths (replace with your actual SVG paths or keep as is)
+    const yearIcon = "M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z";
+    const directorIcon = "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z";
+    const countryIcon = "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z";
+    const ratingIcon = "M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z";
+
+    metaContainer.innerHTML += createMetaItem(yearIcon, "发行纪年", movie.year);
+    metaContainer.innerHTML += createMetaItem(directorIcon, "信息源 (导演)", movie.director);
+    metaContainer.innerHTML += createMetaItem(countryIcon, "来源地区", movie.country);
+
+    // Rating
+    const ratingContainer = document.getElementById('detailRating');
+    if (typeof movie.rating === 'number') {
+        ratingContainer.innerHTML = `<svg viewBox="0 0 24 24"><path d="${ratingIcon}"/></svg><span>${movie.rating.toFixed(1)}</span>`;
+        ratingContainer.title = `神经评分: ${movie.rating.toFixed(1)}`;
+    } else {
+        ratingContainer.innerHTML = '<span class="placeholder" style="font-size: 1rem; font-style: italic;">未评分</span>';
+        ratingContainer.title = ''; // Clear title if no rating
+    }
+
+    // Genres
+    const genresContainer = document.getElementById('detailGenres');
+    const genresSection = document.getElementById('detailGenresContainer'); // The whole block
+    if (movie.genres && movie.genres.length > 0) {
+        genresContainer.innerHTML = movie.genres.map(g => `<span>${g}</span>`).join('');
+        genresSection.style.display = 'block'; // Show the block
+    } else {
+        genresContainer.innerHTML = '';
+        genresSection.style.display = 'none'; // Hide the block if no genres
+    }
+
+    // Overview
+    const overviewEl = document.getElementById('detailOverview');
+    const overviewSection = document.getElementById('detailOverviewContainer');
+    if (movie.overview) {
+        overviewEl.textContent = movie.overview;
+        overviewSection.style.display = 'block';
+    } else {
+        overviewEl.textContent = '';
+        overviewSection.style.display = 'none';
+    }
+
+    // User Review and Date
+    document.getElementById('detailUserReview').textContent = movie.review || '无个人日志。';
+    const userRatingDateEl = document.getElementById('detailUserRatingDate');
+    if (movie.ratingDate) {
+         userRatingDateEl.textContent = `访问日期: ${new Date(movie.ratingDate).toLocaleDateString('sv-SE')}`; // YYYY-MM-DD
+         userRatingDateEl.style.display = 'block';
+    } else {
+         userRatingDateEl.textContent = '';
+         userRatingDateEl.style.display = 'none';
+    }
+
+
+    // Link
+    const linkContainer = document.getElementById('detailLinkContainer');
+    if (movie.link) {
+        // Use a template literal for the button, ensure SVG path is correct
+        const linkIcon = "M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z";
+        linkContainer.innerHTML = `
+            <a href="${movie.link}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-small" title="打开链接: ${movie.link}">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="${linkIcon}"/></svg>
+                访问接口
+            </a>`;
+        linkContainer.style.display = 'block';
+    } else {
+        linkContainer.innerHTML = '';
+        linkContainer.style.display = 'none';
+    }
+
+    // Edit Button - Re-attach listener safely
+    const editBtn = document.getElementById('editFromDetailBtn');
+    const newEditBtn = editBtn.cloneNode(true); // Clone to remove old listeners
+    editBtn.parentNode.replaceChild(newEditBtn, editBtn);
+    newEditBtn.addEventListener('click', () => {
+        closeModal('movieDetailModal');
+        editMovie(movieId); // Pass the correct ID
+    });
+
+    openModal('movieDetailModal');
+}
+
+
+function deleteMovie(id) {
+    // Confirm deletion
+    if (!confirm(`确定要永久删除此意识片段吗？\nID: ${id}`)) {
+        return;
+    }
+    let movies = JSON.parse(localStorage.getItem('movies') || '[]');
+    const initialLength = movies.length;
+    // Filter out the movie with the matching ID (ensure type comparison if needed)
+    movies = movies.filter(m => String(m.id) !== String(id));
+
+    // Check if a movie was actually removed
+    if (movies.length < initialLength) {
+        localStorage.setItem('movies', JSON.stringify(movies));
+        renderMovies(); // Re-render the list
+        // Optionally, close detail modal if it was open for this movie
+        // const detailModal = document.getElementById('movieDetailModal');
+        // if(detailModal.classList.contains('active') && detailModal.dataset.showingId === String(id)) {
+        //    closeModal('movieDetailModal');
+        // }
+    } else {
+        console.warn(`删除失败：未找到 ID 为 ${id} 的片段。`);
+        alert('删除失败，未找到目标片段。');
+    }
+}
+
+function deleteSelectedMovies() {
+    const selectedCheckboxes = document.querySelectorAll('#movieList .movie-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        alert('请先在当前页选择要清除的片段。');
+        return;
+    }
+
+    const idsToDelete = Array.from(selectedCheckboxes).map(cb => String(cb.dataset.id));
+    const count = idsToDelete.length;
+
+    if (!confirm(`确定要永久清除当前页选中的 ${count} 条片段吗？`)) {
+        return;
+    }
+
+    let movies = JSON.parse(localStorage.getItem('movies') || '[]');
+    const initialLength = movies.length;
+    // Filter out movies whose IDs are in the deletion list
+    movies = movies.filter(m => !idsToDelete.includes(String(m.id)));
+
+    if (movies.length < initialLength) {
+        localStorage.setItem('movies', JSON.stringify(movies));
+        document.getElementById('selectAll').checked = false; // Uncheck "select all"
+        renderMovies(); // Re-render the list
+        console.log(`成功删除了 ${initialLength - movies.length} 条片段。`);
+    } else {
+        console.warn('尝试删除选中片段，但似乎没有匹配项被移除。');
+        // No alert needed here as the confirmation was passed.
+    }
+}
+
+
 function editMovie(id) {
-    const movies = JSON.parse(localStorage.getItem('movies'));
+    const movies = JSON.parse(localStorage.getItem('movies') || '[]');
     const movie = movies.find(m => String(m.id) === String(id));
-    if (!movie) { alert('未找到电影信息。'); return; }
+    if (!movie) {
+        alert('无法编辑：未找到片段信息。');
+        return;
+    }
+
+    // Populate the edit form modal
     document.getElementById('editMovieId').value = movie.id;
     document.getElementById('editTitle').value = movie.title || '';
     document.getElementById('editDirector').value = movie.director || '';
     document.getElementById('editYear').value = movie.year || '';
-    document.getElementById('editRating').value = movie.rating || '';
-    document.getElementById('editRatingDate').value = movie.ratingDate || '';
+    document.getElementById('editRating').value = typeof movie.rating === 'number' ? movie.rating : ''; // Handle null rating
+    document.getElementById('editRatingDate').value = movie.ratingDate || ''; // Already YYYY-MM-DD or empty
     document.getElementById('editCountry').value = movie.country || '';
     document.getElementById('editLink').value = movie.link || '';
     document.getElementById('editCoverUrl').value = movie.coverUrl || '';
     document.getElementById('editReview').value = movie.review || '';
-    openModal('editMovieModal'); // 使用通用函数打开模态框
+
+    openModal('editMovieModal');
 }
 
-/**
- * 关闭编辑模态框。
- */
-function closeEditModal() {
-    closeModal('editMovieModal'); // 使用通用函数关闭
-}
-
-/**
- * 保存编辑模态框中的修改。
- */
 function saveMovieEdit() {
-    const movieId = document.getElementById('editMovieId').value;
-    if (!movieId) return;
-    const movies = JSON.parse(localStorage.getItem('movies'));
-    const movieIndex = movies.findIndex(m => String(m.id) === String(movieId));
-    if (movieIndex === -1) { alert('更新失败，未找到电影。'); closeModal('editMovieModal'); return; }
+    const id = document.getElementById('editMovieId').value;
+    if (!id) return; // Should not happen if modal opened correctly
 
-    const updatedTitle = document.getElementById('editTitle').value.trim();
-    const newRatingDateInput = document.getElementById('editRatingDate').value;
-    let ratingDateToSave = movies[movieIndex].ratingDate; // 默认保留原日期
+    const movies = JSON.parse(localStorage.getItem('movies') || '[]');
+    const index = movies.findIndex(m => String(m.id) === String(id));
 
-    if (!updatedTitle) { alert('电影名称不能为空！'); return; }
-    if (newRatingDateInput) { // 如果用户输入了日期
-        if (isNaN(new Date(newRatingDateInput).getTime())) { // 校验格式
-            alert('输入的观影日期格式无效！请使用 YYYY-MM-DD 格式，或留空以保留原日期。'); return;
-        }
-        ratingDateToSave = newRatingDateInput; // 格式有效，使用新日期
-    } // 如果输入为空，则 ratingDateToSave 保持原值
+    if (index === -1) {
+        alert('更新失败，未找到要编辑的片段。');
+        closeModal('editMovieModal');
+        return;
+    }
 
-    // 更新电影对象
-    movies[movieIndex] = { ...movies[movieIndex],
-        title: updatedTitle, director:document.getElementById('editDirector').value.trim(),
-        year:parseInt(document.getElementById('editYear').value)||null, rating:parseFloat(document.getElementById('editRating').value)||null,
-        ratingDate: ratingDateToSave, // 保存最终决定的日期
-        country:document.getElementById('editCountry').value.trim(), link:document.getElementById('editLink').value.trim(),
-        coverUrl:document.getElementById('editCoverUrl').value.trim(), review:document.getElementById('editReview').value.trim(),
-        updatedAt:new Date().toISOString() };
-    localStorage.setItem('movies',JSON.stringify(movies));
-    closeModal('editMovieModal'); renderMovies(); alert('更新成功！');
+    // Get values from form
+    const title = document.getElementById('editTitle').value.trim();
+    const director = document.getElementById('editDirector').value.trim();
+    const year = parseInt(document.getElementById('editYear').value) || null; // Use null if not a valid year
+    const rating = parseFloat(document.getElementById('editRating').value) || null; // Use null if not valid number
+    const ratingDateInput = document.getElementById('editRatingDate').value;
+    const country = document.getElementById('editCountry').value.trim();
+    const link = document.getElementById('editLink').value.trim();
+    const coverUrl = document.getElementById('editCoverUrl').value.trim();
+    const review = document.getElementById('editReview').value.trim();
+
+    // Validate inputs
+    if (!title) { alert('片段标识符不能为空！'); return; }
+    if (ratingDateInput && isNaN(new Date(ratingDateInput).getTime())) { alert('访问日期格式无效！请使用 YYYY-MM-DD 或留空。'); return; }
+    if (year && (year < 1880 || year > 2099)) { alert('发行纪年无效！'); return; }
+    if (rating !== null && (rating < 0 || rating > 10)) { alert('神经评分必须在 0 到 10 之间！'); return; }
+
+    const ratingDate = ratingDateInput || null; // Store as null if empty
+
+    // Update the movie object in the array
+    movies[index] = {
+        ...movies[index], // Preserve original ID and createdAt
+        title,
+        director,
+        year,
+        rating,
+        ratingDate,
+        country,
+        link,
+        coverUrl,
+        review,
+        updatedAt: new Date().toISOString() // Add/Update modification timestamp
+    };
+
+    // Save back to localStorage
+    localStorage.setItem('movies', JSON.stringify(movies));
+
+    closeModal('editMovieModal');
+    renderMovies(); // Re-render to show changes
 }
 
 
 // --- 模态框与下拉菜单控制 ---
-/**
- * 打开指定 ID 的模态框。
- * @param {string} modalId - 模态框元素的 ID。
- */
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
+function openModal(id) {
+    const modal = document.getElementById(id);
     if (modal) {
-        modal.classList.add('active'); // 添加 active 类以显示
-        document.body.style.overflow = 'hidden'; // 禁止背景滚动
-    } else { console.error(`未找到 ID 为 "${modalId}" 的模态框。`); }
-}
-/**
- * 关闭指定 ID 的模态框。
- * @param {string} modalId - 模态框元素的 ID。
- */
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active'); // 移除 active 类以隐藏
-        // 检查是否还有其他模态框处于活动状态，如果没有，则恢复背景滚动
-        if (!document.querySelector('.modal-overlay.active')) {
-            document.body.style.overflow = '';
-        }
+        modal.classList.add('active');
+        // Prevent background scrolling when modal is open
+        document.body.style.overflow = 'hidden';
+    } else {
+        console.error(`尝试打开模态框失败：未找到 ID: "${id}"`);
     }
 }
 
-let isDropdownOpen = false; // 标记下拉菜单是否打开
-const manageMenuBtn = document.getElementById('manageMenuBtn');       // 管理按钮
-const manageMenuDropdown = document.getElementById('manageMenuDropdown'); // 下拉菜单
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.remove('active');
+        // Restore background scrolling only if NO other modals are active
+        // Check if any modal overlay still has the 'active' class
+        const anyModalActive = document.querySelector('.modal-overlay.active');
+        if (!anyModalActive) {
+            document.body.style.overflow = '';
+        }
+    }
+     // Reset forms within closed modals (optional, but good practice)
+     const form = modal?.querySelector('form');
+     if (form) {
+         form.reset();
+     }
+     // Clear file input name if closing import modal
+     if (id === 'importCsvModal') {
+         document.getElementById('modalFileName').textContent = '未选择文件';
+     }
+     // Reset API key placeholder if needed (though saving handles this better)
+}
 
-/**
- * 切换管理下拉菜单的显示/隐藏状态。
- */
+// Dropdown Menu Logic
+let isDropdownOpen = false;
+const manageMenuBtn = document.getElementById('manageMenuBtn');
+const manageMenuDropdown = document.getElementById('manageMenuDropdown');
+
 function toggleDropdown() {
     isDropdownOpen = !isDropdownOpen;
-    manageMenuDropdown.classList.toggle('active'); // 切换 active 类
-    manageMenuBtn.setAttribute('aria-expanded', isDropdownOpen); // 更新 ARIA 属性
+    manageMenuDropdown.classList.toggle('active', isDropdownOpen); // Use second arg for clarity
+    manageMenuBtn.setAttribute('aria-expanded', isDropdownOpen);
 }
-/**
- * 关闭管理下拉菜单。
- */
+
 function closeDropdown() {
-    if (isDropdownOpen) { // 仅在菜单打开时执行
+    if (isDropdownOpen) {
         isDropdownOpen = false;
         manageMenuDropdown.classList.remove('active');
         manageMenuBtn.setAttribute('aria-expanded', isDropdownOpen);
@@ -612,117 +1007,196 @@ function closeDropdown() {
 }
 
 // --- UI & 分页 ---
-/**
- * 应用电影卡片入场动画。
- */
-function animateCards() { const cards=document.querySelectorAll('.movie-item'); cards.forEach((c,i)=>{c.style.opacity='0';c.style.transform='translateY(10px)';requestAnimationFrame(()=>{c.style.transition=`all 0.3s ease-out ${i*0.03}s`;c.style.opacity='1';c.style.transform='translateY(0)';});}); }
-/**
- * 跳转到下一页。
- */
-function goToNextPage() { const pages=Math.ceil(JSON.parse(localStorage.getItem('movies')||'[]').length/moviesPerPage); if(currentPage<pages){currentPage++;renderMovies();window.scrollTo({top:document.querySelector('#my-collection-section')?.offsetTop-20||0,behavior:'smooth'});} }
-/**
- * 跳转到上一页。
- */
-function goToPrevPage() { if(currentPage>1){currentPage--;renderMovies();window.scrollTo({top:document.querySelector('#my-collection-section')?.offsetTop-20||0,behavior:'smooth'});} }
-/**
- * 跳转到指定页码。
- */
-function jumpToPage() { const input=document.getElementById('jumpPage');const num=parseInt(input.value);const pages=Math.ceil(JSON.parse(localStorage.getItem('movies')||'[]').length/moviesPerPage); if(!isNaN(num)&&num>=1&&num<=pages){currentPage=num;renderMovies();input.value='';window.scrollTo({top:document.querySelector('#my-collection-section')?.offsetTop-20||0,behavior:'smooth'});}else{alert(`请输入 1 到 ${pages} 之间的页码！`);input.value='';}}
-/**
- * 处理“全选”复选框的变化。
- */
-function handleSelectAll() { const chk=document.getElementById('selectAll').checked; document.querySelectorAll('.movie-checkbox').forEach(c=>c.checked=chk); checkSelectedMovies(); }
-/**
- * 检查选中状态，更新“全选”和“删除选中”菜单项。
- */
-function checkSelectedMovies() {
-    const selectedCheckboxes = document.querySelectorAll('.movie-checkbox:checked');
-    const totalCheckboxes = document.querySelectorAll('.movie-checkbox');
-    const deleteMenuItem = document.getElementById('deleteSelectedMenuItem'); // 获取菜单项
-    const selectedCount = selectedCheckboxes.length;
-    const totalCount = totalCheckboxes.length;
+function goToNextPage() {
+    // Recalculate total pages based on current filters before incrementing
+    const allMovies = JSON.parse(localStorage.getItem('movies') || '[]');
+    const genreFiltered = filterMoviesByGenre(allMovies, currentGenreFilter);
+    const searchFiltered = filterMovies(genreFiltered, currentSearchTerm);
+    const totalVisible = searchFiltered.length;
+    const totalPages = Math.ceil(totalVisible / moviesPerPage) || 1;
 
-    // 更新“删除选中”菜单项的禁用状态
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderMovies();
+        // Scroll to top of list section smoothly
+        document.getElementById('my-collection-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function goToPrevPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderMovies();
+        document.getElementById('my-collection-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function jumpToPage() {
+    const input = document.getElementById('jumpPage');
+    const pageNum = parseInt(input.value);
+
+    // Recalculate total pages based on current filters for validation
+    const allMovies = JSON.parse(localStorage.getItem('movies') || '[]');
+    const genreFiltered = filterMoviesByGenre(allMovies, currentGenreFilter);
+    const searchFiltered = filterMovies(genreFiltered, currentSearchTerm);
+    const totalVisible = searchFiltered.length;
+    const totalPages = Math.ceil(totalVisible / moviesPerPage) || 1;
+
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+        currentPage = pageNum;
+        renderMovies();
+        input.value = ''; // Clear input after jump
+        document.getElementById('my-collection-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        alert(`请输入 1 到 ${totalPages} 之间的页码！`);
+        input.value = ''; // Clear invalid input
+    }
+}
+
+function handleSelectAll() {
+    const isChecked = document.getElementById('selectAll').checked;
+    const checkboxes = document.querySelectorAll('#movieList .movie-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = isChecked;
+    });
+    checkSelectedMovies(); // Update delete button state
+}
+
+function checkSelectedMovies() {
+    const selectedCheckboxes = document.querySelectorAll('#movieList .movie-checkbox:checked');
+    const allCheckboxesOnPage = document.querySelectorAll('#movieList .movie-checkbox');
+    const deleteMenuItem = document.getElementById('deleteSelectedMenuItem');
+    const selectAllCheckbox = document.getElementById('selectAll');
+
+    const selectedCount = selectedCheckboxes.length;
+    const totalOnPage = allCheckboxesOnPage.length;
+
+    // Enable/disable delete button
     if (deleteMenuItem) {
-        if (selectedCount > 0) {
-            deleteMenuItem.classList.remove('dropdown-item-disabled'); // 启用
+        deleteMenuItem.classList.toggle('dropdown-item-disabled', selectedCount === 0);
+        // Make it focusable only when enabled (accessibility)
+        deleteMenuItem.tabIndex = (selectedCount === 0) ? -1 : 0;
+    }
+
+    // Update "Select All" checkbox state (checked, indeterminate, or unchecked)
+    if (selectAllCheckbox) {
+        if (totalOnPage === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.disabled = true; // Disable if no items on page
         } else {
-            deleteMenuItem.classList.add('dropdown-item-disabled'); // 禁用
+            selectAllCheckbox.disabled = false; // Enable if items exist
+            selectAllCheckbox.checked = selectedCount === totalOnPage;
+            selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalOnPage;
         }
     }
-    // 更新“全选”复选框的状态
-    document.getElementById('selectAll').checked = totalCount > 0 && selectedCount === totalCount;
 }
-/**
- * 从添加电影模态框打开豆瓣搜索。
- */
+
 function searchDoubanFromModal() {
-    const titleInput = document.getElementById('modalTitle'); // 获取模态框内的标题输入
+    const titleInput = document.getElementById('modalTitle');
     const title = titleInput.value.trim();
-    if (!title) { alert('请先在模态框中输入电影名称。'); return; }
-    window.open(`https://search.douban.com/movie/subject_search?search_text=${encodeURIComponent(title)}`, '_blank');
+    if (!title) {
+        alert('请先输入片段标识符。');
+        return;
+    }
+    const url = `https://search.douban.com/movie/subject_search?search_text=${encodeURIComponent(title)}`;
+    window.open(url, '_blank', 'noopener,noreferrer'); // Add security attributes
 }
 
-// --- 初始化 ---
-/**
- * 页面加载完成后执行的初始化函数。
- */
-function init() {
-    initStorage(); // 初始化存储
-    renderMovies(); // 渲染初始列表
-    animateCards(); // 应用初始动画
 
-    // --- 绑定事件监听器 ---
+// --- Initialization ---
+function init() {
+    initStorage(); // Ensure 'movies' key exists in localStorage
+
+    // --- Event Listeners Setup ---
     document.getElementById('nextPage')?.addEventListener('click', goToNextPage);
     document.getElementById('prevPage')?.addEventListener('click', goToPrevPage);
     document.getElementById('selectAll')?.addEventListener('change', handleSelectAll);
-    // 删除选中按钮现在是菜单项，点击事件在 HTML 的 onclick 中处理
+    // Use 'input' for instant feedback on search
+    document.getElementById('searchInput')?.addEventListener('input', () => { currentPage = 1; renderMovies(); });
+    document.getElementById('sortSelect')?.addEventListener('change', () => { currentPage = 1; renderMovies(); });
+    document.getElementById('genreFilter')?.addEventListener('change', () => { currentPage = 1; renderMovies(); });
+    // Jump page on button click (already handled by onclick) or Enter key in input
+    document.getElementById('jumpPage')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') jumpToPage(); });
 
-    // 监听电影列表区域的 change 事件（用于复选框）
-    document.getElementById('movieList')?.addEventListener('change', (e) => {
-        if (e.target.matches('.movie-checkbox')) {
-            checkSelectedMovies(); // 更新选中状态
-        }
-    });
-    // 监听键盘事件 (ESC 关闭模态框或下拉菜单)
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            const activeModal = document.querySelector('.modal-overlay.active');
-            if (activeModal) {
-                closeModal(activeModal.id); // 如果有活动的模态框，关闭它
-            } else {
-                closeDropdown(); // 否则关闭下拉菜单
+    // Event delegation for movie list clicks (details and checkbox)
+    document.getElementById('movieList')?.addEventListener('click', (e) => {
+        const movieItem = e.target.closest('.movie-item');
+        if (!movieItem) return; // Click was not inside a movie item
+
+        const isCheckbox = e.target.classList.contains('movie-checkbox');
+        const isCheckboxContainer = e.target.closest('.checkbox-container');
+
+        if (isCheckbox) {
+            // Checkbox itself was clicked
+            checkSelectedMovies(); // Update selection state immediately
+        } else if (isCheckboxContainer) {
+            // Clicked the area around the checkbox, toggle the checkbox
+            const checkbox = isCheckboxContainer.querySelector('.movie-checkbox');
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                // Manually trigger change event if needed, or just update state
+                checkSelectedMovies();
+            }
+        } else {
+            // Clicked anywhere else on the item, show details
+            const movieId = movieItem.dataset.movieId;
+            if (movieId) {
+                showMovieDetails(movieId);
             }
         }
     });
-    // 监听 body 点击事件（关闭模态框背景、关闭下拉菜单）
+
+    // Global listeners
+    document.addEventListener('keydown', (e) => {
+        // Close modals or dropdown on Escape key
+        if (e.key === 'Escape') {
+            const activeModal = document.querySelector('.modal-overlay.active');
+            if (activeModal) {
+                closeModal(activeModal.id);
+            } else if (isDropdownOpen) {
+                closeDropdown();
+            }
+        }
+    });
+
+    // Click outside modal/dropdown to close
     document.body.addEventListener('click', (e) => {
-        // 点击模态框背景关闭
+        // Close modal if clicking on the overlay itself
         if (e.target.classList.contains('modal-overlay')) {
             closeModal(e.target.id);
         }
-        // 点击下拉菜单外部区域关闭菜单
-        if (manageMenuBtn && manageMenuDropdown && !manageMenuBtn.contains(e.target) && !manageMenuDropdown.contains(e.target)) {
+        // Close dropdown if clicking outside the button and the menu
+        if (isDropdownOpen && manageMenuBtn && manageMenuDropdown &&
+            !manageMenuBtn.contains(e.target) && !manageMenuDropdown.contains(e.target)) {
             closeDropdown();
         }
     });
-    // 监听导入模态框中的文件选择
+
+    // Update file name display on file selection
     document.getElementById('modalFileInput')?.addEventListener('change', (e) => {
         document.getElementById('modalFileName').textContent = e.target.files[0]?.name || '未选择文件';
     });
-    // 监听管理菜单按钮点击
+
+    // Dropdown toggle button
     manageMenuBtn?.addEventListener('click', toggleDropdown);
 
-    // --- 初始化 UI 状态 ---
-    // 设置页脚日期
+    // --- Initial UI Setup ---
+    // Display current date in footer
     document.getElementById('currentDate').textContent = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
-    // 检查并更新设置模态框中 API Key 输入框的占位符
+    // Set API key input placeholder based on storage
     if (getTmdbApiKey()) {
-        document.getElementById('modalTmdbApiKey').placeholder = "API Key 已保存";
+        document.getElementById('modalTmdbApiKey').placeholder = "密钥已保存 (输入新密钥覆盖)";
     }
-    // 初始检查选中状态（特别是删除菜单项的禁用状态）
-    checkSelectedMovies();
+     // Set initial sort order display
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) sortSelect.value = currentSortOrder;
+
+
+    // --- Initial Render ---
+    renderMovies();
 }
 
-// 页面加载完成后执行初始化
-document.addEventListener('DOMContentLoaded', init);
+// --- Run Initialization ---
+// Use DOMContentLoaded to ensure the DOM is ready before running scripts
+document。addEventListener('DOMContentLoaded', init);
